@@ -12,7 +12,8 @@ def json_crop(json_path, reid_path, process_mode="rectangle"):
     json_path = json_path
     json_anno = ReadAnno(json_path, process_mode=process_mode)
     img_width, img_height = json_anno.get_width_height()
-    filename = json_anno.get_filename()
+    #filename = json_anno.get_filename()
+    filename = os.path.basename(json_path.replace(".json", ".jpg"))
     coordis = json_anno.get_coordis()
     #save_path = os.path.join(reid_path, filename.replace(".jpg", ""))
     img_path = os.path.join(json_dir, filename)
@@ -31,7 +32,7 @@ if __name__ == "__main__":
     data_path = os.path.join(root, 'data')
     data_dirs = os.listdir(data_path)
     for data_dir in data_dirs:
-        #print(data_dir)
+        print(data_dir + '\n')
         json_dir=os.path.join(data_path, data_dir)
         label_json = (data_path +"\\%s\*.json"  %(data_dir))
         jsonpath =glob.glob(label_json)
