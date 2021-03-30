@@ -9,7 +9,8 @@ def json_transform_txt(json_path, txt_path, process_mode="rectangle"):
     json_path = json_path
     json_anno = ReadAnno(json_path, process_mode=process_mode)
     img_width, img_height = json_anno.get_width_height()
-    filename = json_anno.get_filename()
+    #filename = json_anno.get_filename()
+    filename = os.path.basename(json.replace(".json", ".jpg"))
     coordis = json_anno.get_coordis()
     save_path = os.path.join(txt_path, filename.replace(".jpg", ".txt"))
     with open(save_path, mode='w') as fp:
