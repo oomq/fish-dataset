@@ -5,6 +5,7 @@ import json
 import glob
 import numpy as np
 from read_json import ReadAnno
+import shutil
 
 
 root = './'
@@ -50,12 +51,14 @@ for data_dir in os.listdir(data):
     img_path = os.path.join(mot, data_dir, 'img1')
 
     json_dir = os.path.join(data, data_dir)
-    if not (os.path.exists(det_path) or os.path.exists(gt_path)):
+    if not (os.path.exists(det_path) or os.path.exists(gt_path) or os.path.exists(img_path)):
         os.makedirs(det_path)
         os.makedirs(gt_path)
+        os.makedirs(img_path)
     json2det(json_dir, det_path)
     json2gt(json_dir, gt_path)
-
+    for img in glob.glob(json_dir+'/*.jpg'):
+        shutil.copy(img, img_path)
 
 
 
