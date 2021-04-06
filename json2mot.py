@@ -59,7 +59,7 @@ def img2video(img_path, video_path):
     #out.release()  # 释放视频流
 
 def gt2motresult(gt_path, motresult):
-    shutil.copy(gt_path)
+    shutil.copy(gt_path+'/gt.txt', motresult)
 
 
 
@@ -70,20 +70,24 @@ def main():
         gt_path = os.path.join(mot, data_dir, 'gt')
         img_path = os.path.join(mot, data_dir, 'img1')
         video_path = os.path.join(mot, data_dir, 'video')
-
+        motresult_path = os.path.join(mot, 'mot_results')
         json_dir = os.path.join(data, data_dir)
-        if not (os.path.exists(det_path) or os.path.exists(gt_path) or os.path.exists(img_path) or os.path.exists(video_path)):
+        if not (os.path.exists(det_path) or os.path.exists(gt_path) or os.path.exists(img_path) or os.path.exists(video_path) ):
             os.makedirs(det_path)
             os.makedirs(gt_path)
             os.makedirs(img_path)
             os.makedirs(video_path)
+
+        if not os.path.exists(motresult_path):
+            os.makedirs(motresult_path)
         json2det(json_dir, det_path)
         json2gt(json_dir, gt_path)
         for img in glob.glob(json_dir+'/*.jpg'):
             shutil.copy(img, img_path)
 
         img2video(img_path, video_path)
-
+        copygt_path = motresult_path + '/%s.txt'%data_dir
+        gt2motresult(gt_path,copygt_path)
 
 if __name__ == '__main__':
     main()
