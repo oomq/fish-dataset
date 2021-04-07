@@ -39,10 +39,10 @@ def txt_to_df(txt_path):
         ele_nearby = ele_nearby.split(',')
         time_list.append(int(ele_nearby[0]))
         id_list.append(int(ele_nearby[1]))
-        x_list.append(int(ele_nearby[2]))
-        y_list.append(int(ele_nearby[3]))
-        w_list.append(int(ele_nearby[4]))
-        h_list.append(int(ele_nearby[5]))
+        x_list.append(round(float(ele_nearby[2])))
+        y_list.append(round(float(ele_nearby[3])))
+        w_list.append(round(float(ele_nearby[4])))
+        h_list.append(round(float(ele_nearby[5])))
 
     df_nearby['frame'] = time_list
     df_nearby['id'] = id_list
@@ -67,10 +67,11 @@ while(cap.isOpened()):
 
         while(df['frame'][num] == index):
             #pt1 = (int(df['x'][num]) - int(df['w'][num]/2),df['y'][num]-int(df['h'][num]/2))
-            pt2 = (df['x'][num] + int(df['w'][num]), df['y'][num] + int(df['h'][num]))
-            pt1 = (int(df['x'][num]) , df['y'][num] )
-            cv2.rectangle(frame,pt1,pt2,(0,255,255),thickness=8)
-
+            pt2 = (df['x'][num] + int(df['w'][num]/2), df['y'][num] + int(df['h'][num]/2))
+            pt1 = (int(df['x'][num]) - int(df['w'][num]/2), int(df['y'][num]) - int(df['h'][num]/2))
+            cv2.rectangle(frame, pt1, pt2, (0,255,255), thickness=8)
+            cv2.putText(frame, str(df['id'][num]), pt1, cv2.FONT_HERSHEY_PLAIN, 2, [255, 255, 255], 2)
+            #cv2.putText(img, label, (x1, y1 + t_size[1] + 4), cv2.FONT_HERSHEY_PLAIN, 2, [255, 255, 255], 2)
             num += 1
 
         cv2.imshow('image', frame)
@@ -78,7 +79,6 @@ while(cap.isOpened()):
         # q键退出
         if (k & 0xff == ord('q')):
             break
-
 
     else:
         cap.release()
