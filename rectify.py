@@ -1,28 +1,25 @@
 import cv2
-import numpy as np
+import tqdm
+import os
 import pandas as pd
 
-root = './11.mp4'
-txt = './gt.txt'
+video_path = './11.mp4'
+result_path = './b.txt'
+img_path = './img'
+label_img = './label'
 
-cap = cv2.VideoCapture(root)
-gt = open(txt)
-#data = np.loadtxt(txt)
+if not os.path.exists(img_path):
+    os.mkdir(img_path)
+
+cap = cv2.VideoCapture(video_path)
+
+def tlwh2xywh(t,l,w,h):#转成中心点
+    return t+w/2, l+h/2, w, h
 
 
-y =[]
-x = []
-time = []
-
-#
-# for i in range(0, int((data.shape[0]))):
-#     id = data[i, 1]
-#     time.append(data[i, 0])
-#     x.append(data[i, 2])
-#     y.append(data[i, 3])
 
 def txt_to_df(txt_path):
-    f =open(txt_path)
+    f = open(txt_path)
     nearby_list = []
     for row in f.readlines():
         nearby_list.append(row)
@@ -55,33 +52,42 @@ def txt_to_df(txt_path):
 
     return df_nearby
 
-
 index = -1
 num = 0
+i =0
 while(cap.isOpened()):
     ret, frame = cap.read()
 
     if ret:
         index += 1
-        df = txt_to_df(txt)
-        print(df['frame'][num])
+        df = txt_to_df(result_path)
+        #print(df['frame'][num])
+        cv2.imwrite("./img/%08d.jpg" % index, frame, [100])
 
+        if i == 0:
+            a = cv2.imread('./img/00000000.jpg')
+            video_h, video_w, _ = a.shape  # 获取一帧图像的宽高信息
+            print('get')
+            i = 1
+
+        txt_name = os.path.join(img_path, '%08d.txt' % index)
+
+        f = open(txt_name,'w')
         while(df['frame'][num] == index):
-            pt1 = (int(df['x'][num]) ,df['y'][num])
-            pt2 = (df['x'][num] + int(df['w'][num]), df['y'][num] + int(df['h'][num]))
-            #pt1 = (int(df['x'][num]) - int(df['w'][num]/2), int(df['y'][num]) - int(df['h'][num]/2))
-            cv2.rectangle(frame, pt1, pt2, (0,255,255), thickness=8)
-            cv2.putText(frame, str(df['id'][num]), pt1, cv2.FONT_HERSHEY_PLAIN, 2, [255, 255, 255], 2)
-            #cv2.putText(img, label, (x1, y1 + t_size[1] + 4), cv2.FONT_HERSHEY_PLAIN, 2, [255, 255, 255], 2)
+            t = int(df['x'][num])
+            l = int(df['y'][num])
+            w = int(df['w'][num])
+            h = int(df['h'][num])
+            x,y,w,h = tlwh2xywh(t,l,w,h)
+            id = int(df['id'][num])
+            f.write(('%g ' * 4 + '%g' + '\n') % (id, x/video_w, y/video_h,
+                                                        w/video_w, h/video_h))  # label
             num += 1
-
-        cv2.imshow('image', frame)
-        k = cv2.waitKey(20)
-        # q键退出
-        if (k & 0xff == ord('q')):
-            break
-
     else:
         cap.release()
         cv2.destroyAllWindows()
         break
+
+
+
+
