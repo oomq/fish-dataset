@@ -1,8 +1,8 @@
 import re
 
-path_a = 'a.txt'
-path_b = 'results.txt'
-path_c = 'b.txt'
+path_a = './原视频和结果/a112.txt'
+path_b = './output/112.txt'
+path_c = './原视频和结果/112.txt'
 
 
 class Fun(object):
@@ -14,7 +14,7 @@ class Fun(object):
         self.string = ''
         self.datas = []
         self.flag = []
-
+        self.a = 0
 
     def execute(self):
         fr1 = open(self.data_path, 'r')
@@ -44,23 +44,26 @@ class Fun(object):
         # 处理一组
         for i,msg in enumerate(msgs):
             frame, id = msgs[i].split(',')
-
+            id = id.replace('\n', '').replace('\r', '')
             if i+1 >= len(msgs):
                 frame2 = self.datas[len(self.datas)-1].split(",")[0]
-            else :
+            else:
                 frame2 = msgs[i + 1].split(",")[0]
             # ss = str(frame) + ',' + str(id)
             # print(type(frame))
-            # print(type(int(frame)))
+            print(type(int(frame)))
             for ind, data in enumerate(self.datas):
                 mata = self.datas[ind].split(',')
                 #print(frame)
                 if (int(mata[0]) >= int(frame)) and (int(mata[0]) < int(frame2) and self.flag[ind] == 0):
-                    if mata[1] == id :
+                    if mata[1] == id:
                         mata[1] = f_id
                         self.flag[ind] = 1
                         self.datas[ind] = ','.join(mata)
                 #print(frame2)
+                #print(mata[0], int(frame2))
+                # if int(frame2) == 693:
+                #     self.a =1
                 if int(mata[0]) >= int(frame2):
                     break
 

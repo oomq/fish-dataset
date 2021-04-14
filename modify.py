@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 import pandas as pd
 
-root = './11.mp4'
-txt = './gt.txt'
+root = './原视频和结果/112.mp4'
+txt = './原视频和结果/112.txt'
 
 cap = cv2.VideoCapture(root)
 gt = open(txt)
@@ -72,6 +72,7 @@ while(cap.isOpened()):
             #pt1 = (int(df['x'][num]) - int(df['w'][num]/2), int(df['y'][num]) - int(df['h'][num]/2))
             cv2.rectangle(frame, pt1, pt2, (0,255,255), thickness=8)
             cv2.putText(frame, str(df['id'][num]), pt1, cv2.FONT_HERSHEY_PLAIN, 2, [255, 255, 255], 2)
+            cv2.putText(frame, str(df['frame'][num]), (20,20), cv2.FONT_HERSHEY_PLAIN, 2, [255, 255, 255], 2)
             #cv2.putText(img, label, (x1, y1 + t_size[1] + 4), cv2.FONT_HERSHEY_PLAIN, 2, [255, 255, 255], 2)
             num += 1
 

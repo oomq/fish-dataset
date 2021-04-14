@@ -3,8 +3,8 @@ import tqdm
 import os
 import pandas as pd
 
-video_path = './11.mp4'
-result_path = './b.txt'
+video_path = './原视频和结果/112.mp4'
+result_path = './原视频和结果/112.txt'
 img_path = './img'
 label_img = './label'
 
