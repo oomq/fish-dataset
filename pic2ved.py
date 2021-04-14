@@ -11,6 +11,7 @@ if not os.path.exists(vedio_path):
 h = 0
 w = 0
 
+
 def img2video(img_path, video_path):
     i = 0
 
@@ -19,20 +20,29 @@ def img2video(img_path, video_path):
         if i == 0:
             h, w, _ = frame.shape  # 获取一帧图像的宽高信息
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
-            out = cv2.VideoWriter(video_path +'/'+img_path +'.avi', fourcc, 25.0, (w, h), True)
+            out = cv2.VideoWriter(video_path + '/' + img_path + '.avi', fourcc, 25.0, (w, h), True)
             i = 1
         out.write(frame)  # 对视频文件写入一帧
-    #out.release()  # 释放视频流
+    # out.release()  # 释放视频流
+
 
 def txt2gt(txt_path, gt_path):
     filenames = glob.glob(txt_path + "/*.txt")
-    f = open(gt_path+ '/'+txt_path+'.txt', 'w')
+    f = open(gt_path + '/' + txt_path + '.txt', 'w')
     for filename in filenames:
-        filepath =  filename
+        filepath = filename
         for line in open(filepath):
-            f.writelines(line)
-        f.write('\n')
+            line[0] = int(line[0]) + 1
+            line[1] *= w
+            line[3] *= w
+            line[2] *= h
+            line[4] *= h
+            str = ('{},' * 4, '{},-1,-1,-1-1').format(
+                int(filename.split('.')[0]), line[0], line[1], line[2], line[3], line[4],
+            )
+            f.writelines(str)
     f.close()
 
-img2video(img_path,vedio_path)
-txt2gt(img_path,vedio_path)
+
+img2video(img_path, vedio_path)
+txt2gt(img_path, vedio_path)
