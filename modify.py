@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 import pandas as pd
 
-root = './原视频和结果/112.mp4'
-txt = './原视频和结果/112.txt'
+root = './原视频和结果/091.mp4'
+txt = './原视频和结果/091.txt'
 
 cap = cv2.VideoCapture(root)
 gt = open(txt)
@@ -58,12 +58,21 @@ def txt_to_df(txt_path):
 
 index = -1
 num = 0
+delay = 30
+i =0
+
+df = txt_to_df(txt)
 while(cap.isOpened()):
     ret, frame = cap.read()
+    if i == 0:
+        h, w, _ = frame.shape
+        output_movie = cv2.VideoWriter(root.replace("mp4", "avi"), cv2.VideoWriter_fourcc('D', 'I', 'V', 'X'), 25,
+                                   (w, h))
+        i = 1
 
     if ret:
         index += 1
-        df = txt_to_df(txt)
+
         print(df['frame'][num])
 
         while(df['frame'][num] == index):
@@ -77,10 +86,15 @@ while(cap.isOpened()):
             num += 1
 
         cv2.imshow('image', frame)
+        output_movie.write(frame)
+
         k = cv2.waitKey(20)
         # q键退出
-        if (k & 0xff == ord('q')):
-            break
+
+        if (delay >= 0 and cv2.waitKey(delay) >= 32): #按任意键暂停
+            cv2.waitKey(0)
+        # if (k & 0xff == ord('q')):
+        #     break
 
     else:
         cap.release()
