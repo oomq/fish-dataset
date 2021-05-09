@@ -15,10 +15,10 @@ import matplotlib.pyplot as plt
 #                   [230, 240, 325, 330, 0.81],
 #                   [220, 230, 315, 340, 0.9]])  # 【文本框样本，格式：【x1,y1,x2,y2,scoer】】
 
-boxes = np.array([[0, 0, 100, 100, 0.72],
-                  [50, 0, 150, 100, 0.8],
-                  [200, 200, 300, 300, 0.92],
-                  [300, 300, 400, 400, 0.9]])  # 【文本框样本，格式：【x1,y1,x2,y2,scoer】】
+boxes = np.array([[1, 1, 100, 100],
+                  [51, 1, 150, 100],
+
+                                    ])  # 【文本框样本，格式：【x1,y1,x2,y2,scoer】】
 
 
 
@@ -64,6 +64,8 @@ def plot_bbox(dets, c='k',tip='1'):
     x2 = dets[:, 2]
     y2 = dets[:, 3]
     plt.figure()
+
+    plt.text(x1, y1,'range(0,5)', size=15, alpha=0.2)
     plt.plot([x1, x2], [y1, y1], c)
     plt.plot([x1, x1], [y1, y2], c)
     plt.plot([x1, x2], [y2, y2], c)
@@ -71,11 +73,57 @@ def plot_bbox(dets, c='k',tip='1'):
     plt.title(tip)
     plt.show()
 
+def iou(bbox, candidates):
+    # 计算iou
+    """Computer intersection over union.
+
+    Parameters
+    ----------
+    bbox : ndarray
+        A bounding box in format `(top left x, top left y, width, height)`.
+    candidates : ndarray
+        A matrix of candidate bounding boxes (one per row) in the same format
+        as `bbox`.
+
+    Returns
+    -------
+    ndarray
+        The intersection over union in [0, 1] between the `bbox` and each
+        candidate. A higher score means a larger fraction of the `bbox` is
+        occluded by the candidate.
+
+    """
+    bbox_tl, bbox_br = bbox[:2], bbox[:2] + bbox[2:]
+    candidates_tl = candidates[:, :2]
+    candidates_br = candidates[:, :2] + candidates[:, 2:]
+
+    tl = np.c_[np.maximum(bbox_tl[0], candidates_tl[:, 0])[:, np.newaxis],
+               np.maximum(bbox_tl[1], candidates_tl[:, 1])[:, np.newaxis]]
+    br = np.c_[np.minimum(bbox_br[0], candidates_br[:, 0])[:, np.newaxis],
+               np.minimum(bbox_br[1], candidates_br[:, 1])[:, np.newaxis]]
+
+    wh = np.maximum(0., br - tl)
+
+    area_intersection = wh.prod(axis=1)
+    area_bbox = bbox[2:].prod()
+    area_candidates = candidates[:, 2:].prod(axis=1)
+    return area_intersection / (area_bbox + area_candidates - area_intersection)
+
+
+def iou_cost(boxes):
+    cost_matrix = np.zeros((len(boxes), len(boxes)))
+    for row, det in enumerate(boxes):
+        cost_matrix[row, :] = iou(det[:5], boxes)
+    cost_matrix = np.triu(cost_matrix,1)
+
+    return cost_matrix
+
+
+
 if __name__ == '__main__':
-    # plot_bbox(boxes, 'k','before')  # before nms
-    print(boxes)
-    print('nms')
-    keep = py_cpu_nms(boxes, thresh=0.2)
-    print(boxes[keep])
-    print('keep',keep)
+    plot_bbox(boxes, 'k','before')  # before nms
+    # print(boxes)
+    h = iou_cost(boxes)
+    # top_tri  = np.triu(h)  # 取上三角函数
+    print('keep')
     # plot_bbox(boxes[keep], 'r','after')  # after nms
