@@ -13,6 +13,7 @@ class occlusion(object):
         self.result_path = result_path
         self.string = ''
         self.datas = []
+        self.occ_datas =[]
         self.input = []
         self.output = []
         self.num = []
@@ -67,16 +68,25 @@ class occlusion(object):
         frame2 = msgs[2].split(',')[1]
         frame2 = int(frame2.replace("\n", ""))
         self.occlusions_length.append(frame2-frame1+1)
+        # FBO
+
+
 
 
 
 
     def eval_full(self):
-        occ_txt = open(self.input_path, 'r')
-        line = occ_txt.readline()
+        occ_txt = open(self.occ_txt, 'r')
+        occ_string = occ_txt.read()
+        self.occ_datas = occ_string.split('\n')
 
-        while line:
-            self.eval_OL(line)
+        for i, line in enumerate(self.occ_datas):
+            msgs = line.split(';')
+            frame1 = int(msgs[i].split(',')[0])
+            frame2 = msgs[i].split(',')[1]
+            frame2 = int(frame2.replace("\n", ""))
+            self.occlusions_length.append(frame2 - frame1 + 1)
+            
 
 
 
