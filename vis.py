@@ -5,6 +5,7 @@ path_input = "02"  # 源数据
 result_path = 'output'
 file_thres = 2
 small_thres =3
+big_thres = 27
 # fr1 = open("scale.txt", 'r')
 # string = fr1.read()
 # datas = string.split('\n')
@@ -31,8 +32,9 @@ class Fun(object):
         self.x = 0
         self.y = 0
         self.unit_dis = 0
-
-
+        self.each_file_distance = []
+        self.each_file_time = []
+        self.second_dis = []
 
 
     def float2int(date):
@@ -76,15 +78,17 @@ class Fun(object):
             if self.data[i, 0] in range(1,3):
                 continue
             self.unit_dis = ((self.x - self.px) ** 2 + (self.y - self.py) ** 2) ** 0.5  # 计算一个两帧间距离
-            if self.unit_dis > small_thres:
+            if self.unit_dis > small_thres and self.unit_dis<big_thres:
                 id = int(self.data[i, 1]) - 1
                 self.distance[id].append(self.unit_dis)
                 self.time[id] += 1
 
+        self.each_file_distance.append(np.sum(self.distance))
+
 
 
 if __name__ == '__main__':
-    fun = Fun( path_input,result_path)
+    fun = Fun(path_input, result_path)
     fun.execute()
 
 
@@ -102,19 +106,3 @@ if __name__ == '__main__':
     #
     # for k, g in groupby(sorted(lst), key=lambda x: x // 50):
     #     print('{}-{}: {}'.format(k * 50, (k + 1) * 50 - 1, len(list(g))))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
