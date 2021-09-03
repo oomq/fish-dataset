@@ -103,16 +103,15 @@ class Fun(object):
             if self.unit_dis >= small_thres and self.unit_dis <= big_thres:
                 self.halfhour_id_dis[id].append(self.unit_dis)
                 self.halfhour_id_time[id] +=1
-
         else:
             x_dis, x_time = 0, 0
             for x in range(0, 5):
                 x_dis += np.sum(self.halfhour_id_dis[x])  ##mean
                 x_time += np.mean(self.halfhour_id_time[x])
             if x_time == 0:
-                self.second_v.append(0)
+                self.halfhour_v.append(0)
             else:
-                self.second_v.append(x_dis / x_time)  # 缺scale.txt
+                self.halfhour_v.append(x_dis / x_time)  # 缺scale.txt
             # 重新初始化
             self.halfhour_id_dis = [[], [], [], [], []]
             self.halfhour_id_time = [0] * 5
@@ -179,7 +178,10 @@ class Fun(object):
     def xls_writer(self):
         workbook = xls.Workbook("{}.xlsx".format(self.data_path))
         worksheet = workbook.add_worksheet("first_sheet")
+
         worksheet.write_column('A1', self.second_v)  # 需要判断哪个单元开始
+        worksheet.write_column('B1', self.second_rest_time)
+        worksheet.write_column('C1', self.halfhour_v)
         workbook.close()
 
 
