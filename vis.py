@@ -3,9 +3,10 @@ import os
 
 path_input = "02"  # 源数据
 result_path = 'output'
-file_thres = 2
+file_thres = 1000
 small_thres =3
 big_thres = 27
+eval_windows =25 #设置统计单元大小
 # fr1 = open("scale.txt", 'r')
 # string = fr1.read()
 # datas = string.split('\n')
@@ -34,7 +35,10 @@ class Fun(object):
         self.unit_dis = 0
         self.each_file_distance = []
         self.each_file_time = []
-        self.second_dis = []
+        self.second_dis = [[],[],[],[],[]]
+        self.second_id_dis =[[],[],[],[],[]]
+        self.second_id_time= [0]*5
+        self.second_v =[]
 
 
     def float2int(date):
@@ -49,6 +53,7 @@ class Fun(object):
             if num == 0:
                 self.vediolen = int(self.data[int(self.data.shape[0]) - 1, 0])
             self.execute_datas()
+            print(file)
 
         print('done')
 
@@ -73,17 +78,59 @@ class Fun(object):
 
 
     def execute_datas(self):
+        frame_flag =0
         for i,line in enumerate(self.data):
             self.renewtlwh(i)
-            if self.data[i, 0] in range(1,3):
+            if self.data[i, 0] in range(1,6):#初始化前两帧 帧从2开始 warning
                 continue
-            self.unit_dis = ((self.x - self.px) ** 2 + (self.y - self.py) ** 2) ** 0.5  # 计算一个两帧间距离
-            if self.unit_dis > small_thres and self.unit_dis<big_thres:
-                id = int(self.data[i, 1]) - 1
-                self.distance[id].append(self.unit_dis)
-                self.time[id] += 1
 
-        self.each_file_distance.append(np.sum(self.distance))
+            self.unit_dis = ((self.x - self.px) ** 2 + (self.y - self.py) ** 2) ** 0.5  # 计算一个两帧间距离
+            id = int(self.data[i, 1]) - 1
+            frame = int(self.data[i, 0])
+            if frame % eval_windows != 0 :
+                if self.unit_dis >= small_thres and self.unit_dis <= big_thres:
+                    self.second_id_dis[id].append(self.unit_dis)
+                    self.second_id_time[id]+=1
+            else:
+                if frame == int(self.data[i-1, 0]):
+                    continue
+                x_dis,x_time =0,0
+                for x in range(0,5):
+                    x_dis += np.sum(self.second_id_dis[x])  ##mean
+                    x_time += np.mean(self.second_id_time[x])
+                # if x_dis ==0:
+                #     print(x_time)
+                self.second_v.append(x_dis/x_time)   #缺scale.txt
+                #重新初始化
+                self.second_id_dis = [[], [], [], [], []]
+                self.second_id_time = [0] * 5
+                #记录新单元
+                if self.unit_dis >= small_thres and self.unit_dis <= big_thres:
+                    self.second_id_dis[id].append(self.unit_dis)
+                    self.second_id_time[id]+=1
+                #单文件
+                # self.distance[id].append(self.unit_dis)
+                # self.time[id] += 1
+        # print('d')
+        # x_dis =0
+        # for x in range(0,6):
+        #     x_dis += self.second_id_dis[x]
+
+        # for a,b in zip(self.second_id_dis,self.second_id_time):
+        #     if b!=0:
+        #         v = a/b
+        #     else:
+        #         continue
+        #     self.second_id_v.append(v)
+        # self.second_id_dis =[[],[],[],[],[]]
+        # self.second_id_time= [0]*5
+
+
+        #单文件
+        # x_dis = 0
+        # for x in range(0,5):
+        #     x_dis+=np.sum(self.distance[x])
+        # self.each_file_distance.append(x_dis)
 
 
 
