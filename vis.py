@@ -50,6 +50,11 @@ class Fun(object):
         self.halfhour_v = []
         self.second_rest_time =[0] * 5
 
+        self.second_acc =[]
+        self.fish_var =[]
+        self.var_x =[]
+        self.var_y=[]
+
         self.count_frame = 0
 
     def float2int(date):
@@ -64,6 +69,7 @@ class Fun(object):
             if num == 0:
                 self.vediolen = int(self.data[int(self.data.shape[0]) - 1, 0])
             self.execute_datas()
+        self.second_acceleration()
         self.xls_writer()
         print('writing')
 
@@ -93,12 +99,34 @@ class Fun(object):
             self.unit_dis = ((self.x - self.px) ** 2 + (self.y - self.py) ** 2) ** 0.5  # 计算一个两帧间距离
             id = int(self.data[i, 1]) - 1
             frame = int(self.data[i, 0])
+            if frame != int(self.data[i - 1, 0]):
+                self.count_frame += 1
+            self.fishing_var()
             self.second_record(frame, id, i)
             self.halfhour_record(frame, id, i)
 
+    def second_acceleration(self):
+        for num in range(0,len(self.second_v)):
+            self.second_acc.append(self.second_v[num] - self.second_v[num+1])
+
+    def fishing_var(self):
+        if self.count_frame % eval_windows != 0:
+            for t,l,w,h in self.tlwh:
+                if w !=0:
+                    self.var_x.append(t + w/2)
+                    self.var_y.append(l + h/2)
+        else:
+            self.fish_var.append(np.var(self.var_x)+np.var(self.var_y))
+            self.var_x, self.var_y = [],[]
+            for t,l,w,h in self.tlwh:
+                if w !=0:
+                    self.var_x.append(t + w/2)
+                    self.var_y.append(l + h/2)
+
+    def swerve(self):
+
+
     def halfhour_record(self,frame,id,i):
-        if frame != int(self.data[i-1, 0]):
-            self.count_frame += 1
         if self.count_frame % eval_big_windows != 0:
             if self.unit_dis >= small_thres and self.unit_dis <= big_thres:
                 self.halfhour_id_dis[id].append(self.unit_dis)
@@ -122,15 +150,13 @@ class Fun(object):
 
 
     def second_record(self, frame, id, i):
-        if frame % eval_windows != 0:
+        if self.count_frame % eval_windows != 0:
             if self.unit_dis >= small_thres and self.unit_dis <= big_thres:
                 self.second_id_dis[id].append(self.unit_dis)
                 self.second_id_time[id] += 1
             elif self.unit_dis < small_thres:
                 self.second_id_rest_time[id] += 1
         else:
-            if frame == int(self.data[i - 1, 0]):
-                return
             x_dis, x_time, rest_time = 0, 0, 0
             for x in range(0, 5):
                 x_dis += np.sum(self.second_id_dis[x])  ##mean
@@ -178,7 +204,7 @@ class Fun(object):
     def xls_writer(self):
         workbook = xls.Workbook("{}.xlsx".format(self.data_path))
         worksheet = workbook.add_worksheet("first_sheet")
-
+        #判断文件类型
         worksheet.write_column('A1', self.second_v)  # 需要判断哪个单元开始
         worksheet.write_column('B1', self.second_rest_time)
         worksheet.write_column('C1', self.halfhour_v)
@@ -186,6 +212,7 @@ class Fun(object):
 
 
 if __name__ == '__main__':
+    #init scale
     fun = Fun(path_input, result_path)
     fun.execute()
 
