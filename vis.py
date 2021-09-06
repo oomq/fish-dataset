@@ -4,23 +4,14 @@ import xlsxwriter as xls
 
 path_input = "02"  # 源数据
 result_path = 'output'
-file_thres = 1000
-small_thres = 3
+file_thres = 2
 big_thres = 27
 eval_windows = 25  # 设置统计单元大小
 eval_big_windows = 25 * 60 * 30
+fr1 = open("scale.txt", 'r')
+string = fr1.read()
+scale_datas = string.split('\n')
 
-
-# fr1 = open("scale.txt", 'r')
-# string = fr1.read()
-# datas = string.split('\n')
-# scale = 0
-# for line in datas:
-#     q = [x for x in line.split(' ')]
-#     if q[0] == data_path:
-#         width = q[3]
-#         scale = 350 / int(width)
-#         break
 
 
 class Fun(object):
@@ -56,6 +47,16 @@ class Fun(object):
         self.var_y=[]
 
         self.count_frame = 0
+        self.workbook = xls.Workbook(self.result_path + "/track.xlsx")
+
+        self.scale = 0
+        for line in scale_datas:
+            q = [x for x in line.split(' ')]
+            if q[0] == self.data_path:
+                width = q[3]
+                self.scale = 350 / int(width)
+                break
+        self.small_thres = 1 / self.scale - 0.6
 
     def float2int(date):
         return int(date)
@@ -106,7 +107,7 @@ class Fun(object):
             self.halfhour_record(frame, id, i)
 
     def second_acceleration(self):
-        for num in range(0,len(self.second_v)):
+        for num in range(0,len(self.second_v)-1):
             self.second_acc.append(self.second_v[num] - self.second_v[num+1])
 
     def fishing_var(self):
@@ -123,12 +124,12 @@ class Fun(object):
                     self.var_x.append(t + w/2)
                     self.var_y.append(l + h/2)
 
-    def swerve(self):
+    # def swerve(self):
 
 
     def halfhour_record(self,frame,id,i):
         if self.count_frame % eval_big_windows != 0:
-            if self.unit_dis >= small_thres and self.unit_dis <= big_thres:
+            if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
                 self.halfhour_id_dis[id].append(self.unit_dis)
                 self.halfhour_id_time[id] +=1
         else:
@@ -144,17 +145,17 @@ class Fun(object):
             self.halfhour_id_dis = [[], [], [], [], []]
             self.halfhour_id_time = [0] * 5
             # 记录新单元
-            if self.unit_dis >= small_thres and self.unit_dis <= big_thres:
+            if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
                 self.halfhour_id_dis[id].append(self.unit_dis)
                 self.halfhour_id_time[id] += 1
 
 
     def second_record(self, frame, id, i):
         if self.count_frame % eval_windows != 0:
-            if self.unit_dis >= small_thres and self.unit_dis <= big_thres:
+            if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
                 self.second_id_dis[id].append(self.unit_dis)
                 self.second_id_time[id] += 1
-            elif self.unit_dis < small_thres:
+            elif self.unit_dis < self.small_thres:
                 self.second_id_rest_time[id] += 1
         else:
             x_dis, x_time, rest_time = 0, 0, 0
@@ -173,10 +174,10 @@ class Fun(object):
             self.second_id_dis = [[], [], [], [], []]
             self.second_id_time = [0] * 5
             # 记录新单元
-            if self.unit_dis >= small_thres and self.unit_dis <= big_thres:
+            if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
                 self.second_id_dis[id].append(self.unit_dis)
                 self.second_id_time[id] += 1
-            elif self.unit_dis < small_thres:
+            elif self.unit_dis < self.small_thres:
                 self.second_rest_time[id] += 1
                 # 单文件
                 # self.distance[id].append(self.unit_dis)
@@ -202,19 +203,21 @@ class Fun(object):
                 # self.each_file_distance.append(x_dis)
 
     def xls_writer(self):
-        workbook = xls.Workbook("{}.xlsx".format(self.data_path))
-        worksheet = workbook.add_worksheet("first_sheet")
+
+        worksheet = self.workbook.add_worksheet("{}".format(self.data_path))
         #判断文件类型
         worksheet.write_column('A1', self.second_v)  # 需要判断哪个单元开始
         worksheet.write_column('B1', self.second_rest_time)
         worksheet.write_column('C1', self.halfhour_v)
-        workbook.close()
+        self.workbook.close()
 
 
 if __name__ == '__main__':
     #init scale
-    fun = Fun(path_input, result_path)
-    fun.execute()
+    for line in scale_datas:
+        q = [x for x in line.split(' ')]
+        fun = Fun(q[0], result_path)
+        fun.execute()
 
 # 分区间统计
 # from itertools import groupby
