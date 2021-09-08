@@ -2,9 +2,9 @@ import numpy as np
 import os
 import xlsxwriter as xls
 
-path_input = "02"  # 源数据
+path_input = "j05"  # 源数据
 result_path = 'output'
-file_thres = 2
+file_thres = 1000
 big_thres = 27
 eval_windows = 25  # 设置统计单元大小
 eval_big_windows = 25 * 60 * 30
@@ -39,7 +39,6 @@ class Fun(object):
         self.halfhour_id_dis = [[], [], [], [], []]
         self.halfhour_id_time = [0] * 5
         self.halfhour_v = []
-        self.second_rest_time =[0] * 5
 
         self.second_acc =[]
         self.fish_var =[]
@@ -47,7 +46,7 @@ class Fun(object):
         self.var_y=[]
 
         self.count_frame = 0
-        self.workbook = xls.Workbook(self.result_path + "/track.xlsx")
+
 
         self.scale = 0
         for line in scale_datas:
@@ -66,6 +65,7 @@ class Fun(object):
             if int(file.replace(".txt", "").replace(self.data_path + "-", "")) > file_thres:
                 # print(num, file)
                 continue
+            print(num, file)
             self.data = np.loadtxt(self.data_path + "/{}".format(file), delimiter=',')
             if num == 0:
                 self.vediolen = int(self.data[int(self.data.shape[0]) - 1, 0])
@@ -76,6 +76,8 @@ class Fun(object):
 
     def renewtlwh(self, i):
         id = int(self.data[i, 1]) - 1
+        # if self.count_frame == 18:
+        #     print(self.count_frame)
         if np.any(np.array(self.tlwh) == 0):
             self.tlwh[id][0] = self.data[i, 2]  # t
             self.tlwh[id][1] = self.data[i, 3]  # l
@@ -102,7 +104,7 @@ class Fun(object):
             frame = int(self.data[i, 0])
             if frame != int(self.data[i - 1, 0]):
                 self.count_frame += 1
-            self.fishing_var()
+            self.fishing_var(frame, id, i)
             self.second_record(frame, id, i)
             self.halfhour_record(frame, id, i)
 
@@ -110,19 +112,27 @@ class Fun(object):
         for num in range(0,len(self.second_v)-1):
             self.second_acc.append(self.second_v[num] - self.second_v[num+1])
 
-    def fishing_var(self):
+    def fishing_var(self,frame, id, i):
         if self.count_frame % eval_windows != 0:
             for t,l,w,h in self.tlwh:
                 if w !=0:
                     self.var_x.append(t + w/2)
                     self.var_y.append(l + h/2)
         else:
-            self.fish_var.append(np.var(self.var_x)+np.var(self.var_y))
-            self.var_x, self.var_y = [],[]
-            for t,l,w,h in self.tlwh:
-                if w !=0:
-                    self.var_x.append(t + w/2)
-                    self.var_y.append(l + h/2)
+            if frame != int(self.data[i - 1, 0]):
+                self.var_x, self.var_y = [],[]
+                for t,l,w,h in self.tlwh:
+                    if w !=0:
+                        self.var_x.append(t + w/2)
+                        self.var_y.append(l + h/2)
+                self.fish_var.append(np.var(self.var_x)+np.var(self.var_y))
+                return
+            else:
+                self.var_x, self.var_y = [],[]
+                for t,l,w,h in self.tlwh:
+                    if w !=0:
+                        self.var_x.append(t + w/2)
+                        self.var_y.append(l + h/2)
 
     # def swerve(self):
 
@@ -133,21 +143,28 @@ class Fun(object):
                 self.halfhour_id_dis[id].append(self.unit_dis)
                 self.halfhour_id_time[id] +=1
         else:
-            x_dis, x_time = 0, 0
-            for x in range(0, 5):
-                x_dis += np.sum(self.halfhour_id_dis[x])  ##mean
-                x_time += np.mean(self.halfhour_id_time[x])
-            if x_time == 0:
-                self.halfhour_v.append(0)
+            if frame != int(self.data[i - 1, 0]):
+                x_dis, x_time = 0, 0
+                for x in range(0, 5):
+                    x_dis += np.sum(self.halfhour_id_dis[x])  ##mean
+                    x_time += np.mean(self.halfhour_id_time[x])
+                if x_time == 0:
+                    self.halfhour_v.append(0)
+                else:
+                    self.halfhour_v.append(x_dis / x_time)  # 缺scale.txt
+                # 重新初始化
+                self.halfhour_id_dis = [[], [], [], [], []]
+                self.halfhour_id_time = [0] * 5
+                # 记录新单元
+                if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
+                    self.halfhour_id_dis[id].append(self.unit_dis)
+                    self.halfhour_id_time[id] += 1
+                return
             else:
-                self.halfhour_v.append(x_dis / x_time)  # 缺scale.txt
-            # 重新初始化
-            self.halfhour_id_dis = [[], [], [], [], []]
-            self.halfhour_id_time = [0] * 5
-            # 记录新单元
-            if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
-                self.halfhour_id_dis[id].append(self.unit_dis)
-                self.halfhour_id_time[id] += 1
+                # 记录新单元
+                if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
+                    self.halfhour_id_dis[id].append(self.unit_dis)
+                    self.halfhour_id_time[id] += 1
 
 
     def second_record(self, frame, id, i):
@@ -158,27 +175,37 @@ class Fun(object):
             elif self.unit_dis < self.small_thres:
                 self.second_id_rest_time[id] += 1
         else:
-            x_dis, x_time, rest_time = 0, 0, 0
-            for x in range(0, 5):
-                x_dis += np.sum(self.second_id_dis[x])  ##mean
-                x_time += np.mean(self.second_id_time[x])
-                rest_time += np.mean(self.second_id_rest_time[x])
-            # if x_dis ==0:
-            #     print(x_time)
-            self.second_rest_time.append(rest_time)
-            if x_time == 0:
-                self.second_v.append(0)
+            if frame != int(self.data[i - 1, 0]):#避免更新单元重复计算
+                x_dis, x_time, rest_time = 0, 0, 0
+                for x in range(0, 5):
+                    x_dis += np.sum(self.second_id_dis[x])  ##mean
+                    x_time += np.mean(self.second_id_time[x])
+                    rest_time += np.mean(self.second_id_rest_time[x])
+                # if x_dis ==0:
+                #     print(x_time)
+                self.second_rest_time.append(rest_time)
+                if x_time == 0:
+                    self.second_v.append(0)
+                else:
+                    self.second_v.append(x_dis / x_time)  # 缺scale.txt
+                # 重新初始化
+                self.second_id_dis = [[], [], [], [], []]
+                self.second_id_time = [0] * 5
+                # 记录新单元
+                if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
+                    self.second_id_dis[id].append(self.unit_dis)
+                    self.second_id_time[id] += 1
+                elif self.unit_dis < self.small_thres:
+                    self.second_id_rest_time[id] += 1
+                return
             else:
-                self.second_v.append(x_dis / x_time)  # 缺scale.txt
-            # 重新初始化
-            self.second_id_dis = [[], [], [], [], []]
-            self.second_id_time = [0] * 5
-            # 记录新单元
-            if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
-                self.second_id_dis[id].append(self.unit_dis)
-                self.second_id_time[id] += 1
-            elif self.unit_dis < self.small_thres:
-                self.second_rest_time[id] += 1
+                # 记录新单元
+                if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
+                    self.second_id_dis[id].append(self.unit_dis)
+                    self.second_id_time[id] += 1
+                elif self.unit_dis < self.small_thres:
+                    self.second_id_rest_time[id] += 1
+
                 # 单文件
                 # self.distance[id].append(self.unit_dis)
                 # self.time[id] += 1
@@ -204,21 +231,32 @@ class Fun(object):
 
     def xls_writer(self):
 
-        worksheet = self.workbook.add_worksheet("{}".format(self.data_path))
+        worksheet = workbook.add_worksheet("{}".format(self.data_path))
         #判断文件类型
+
         worksheet.write_column('A1', self.second_v)  # 需要判断哪个单元开始
         worksheet.write_column('B1', self.second_rest_time)
         worksheet.write_column('C1', self.halfhour_v)
-        self.workbook.close()
+        worksheet.write_column('D1',self.second_acc)
+        worksheet.write_column('E1',self.fish_var)
 
 
 if __name__ == '__main__':
     #init scale
+    #多文件
+    workbook = xls.Workbook(result_path+"/track.xlsx")
     for line in scale_datas:
         q = [x for x in line.split(' ')]
+        print(q[0])
         fun = Fun(q[0], result_path)
         fun.execute()
+    workbook.close()
 
+    # 单文件
+    # workbook = xls.Workbook(result_path + "/track.xlsx")
+    # fun = Fun(path_input, result_path)
+    # fun.execute()
+    # workbook.close()
 # 分区间统计
 # from itertools import groupby
 #
