@@ -2,9 +2,9 @@ import numpy as np
 import os
 import xlsxwriter as xls
 import math
-path_input = "08"  # 源数据
+path_input = "04"  # 源数据
 result_path = 'output'
-file_thres = 1000
+file_thres = 2
 big_thres = 27
 eval_windows = 25  # 设置统计单元大小
 eval_big_windows = 25 * 60 * 30
@@ -55,26 +55,26 @@ class Fun(object):
         self.swerve_k = [0] * 5
         self.k = 0
         #
-
+        self.small_thres = [0]*5
         self.count_frame = 0
 
         self.file_id_v =[[], [], [], [], []]
         self.file_id_i =[0] * 5
-        self.scale = 0
-        for line in scale_datas:
-            q = [x for x in line.split(' ')]
-            if q[0] == self.data_path:
-                width = q[3]
-                self.scale = 350 / int(width)
-                break
-        self.small_thres = 1 / self.scale - 0.6
+        # self.scale = 0
+        # for line in scale_datas:
+        #     q = [x for x in line.split(' ')]
+        #     if q[0] == self.data_path:
+        #         width = q[3]
+        #         self.scale = 350 / int(width)
+        #         break
+        # self.small_thres = 1 / self.scale - 0.6
 
     def float2int(date):
         return int(date)
 
     def execute(self):
         for num, file in enumerate(os.listdir(self.data_path)):
-            if int(file.replace(".txt", "").replace(self.data_path + "-", "")) > file_thres:
+            if int(file.replace(".txt", "").replace(self.data_path + "-", "")) != file_thres:
                 # print(num, file)
                 continue
             print(num, file)
@@ -97,12 +97,14 @@ class Fun(object):
 
         self.px = self.tlwh[id][0] + self.tlwh[id][2] / 2
         self.py = self.tlwh[id][1] + self.tlwh[id][3] / 2
+        self.small_thres[id] = math.sqrt((self.tlwh[id][2] + self.tlwh[id][3])/100)
         self.tlwh[id][0] = self.data[i, 2]  # t
         self.tlwh[id][1] = self.data[i, 3]  # l
         self.tlwh[id][2] = self.data[i, 4]  # w
         self.tlwh[id][3] = self.data[i, 5]  # h
         self.x = self.tlwh[id][0] + self.tlwh[id][2] / 2
         self.y = self.tlwh[id][1] + self.tlwh[id][3] / 2
+
 
     def execute_datas(self):
         for i, line in enumerate(self.data):
@@ -149,7 +151,7 @@ class Fun(object):
     # def renew_(self):
 
     def swerve(self,id,i):
-        if self.data[i,0] % 25 == 0:
+        if self.count_frame % eval_windows != 0:
             dis = ((self.x - self.swerve_px[id]) ** 2 + (self.y - self.swerve_py[id]) ** 2) ** 0.5
             if self.swerve_k[id] == 0:
                 self.swerve_px[id] = self.x
@@ -157,12 +159,11 @@ class Fun(object):
                 self.swerve_k[id] = 1
             elif self.swerve_k[id] == 1:
                 tan = math.atan2(self.y-self.swerve_py[id],self.x-self.swerve_px[id])
-
                 self.swerve_angle[id] = math.degrees(tan)
                 self.swerve_px[id] = self.x
                 self.swerve_py[id] = self.y
                 self.swerve_k[id] = 2
-            elif dis>= 6 and dis <= 1000:
+            elif dis>= self.small_thres[id] * 2 and dis <= big_thres:
                 tan = math.atan2(self.y-self.swerve_py[id], self.x-self.swerve_px[id])
 
                 self.swerve_angle1 = math.degrees(tan)
@@ -170,19 +171,18 @@ class Fun(object):
                 self.swerve_angle[id] = math.degrees(tan)
                 self.swerve_px[id] = self.x
                 self.swerve_py[id] = self.y
-
-
             if round(self.angle[id],1) >=90.0 or round(self.angle[id],1) <= -90.0:
                 self.k +=1
 
                 self.angle[id] = 0.0
                 # print("{} ok".format(self.swerves))
+        else:
             if self.data[i,0] != self.data[i-1,0]:
                 self.swerves.append(self.k)
 
     def halfhour_record(self,frame,id,i):
         if self.count_frame % eval_big_windows != 0:
-            if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
+            if self.unit_dis >= self.small_thres[id] and self.unit_dis <= big_thres:
                 self.halfhour_id_dis[id].append(self.unit_dis)
                 self.halfhour_id_time[id] +=1
         else:
@@ -199,24 +199,24 @@ class Fun(object):
                 self.halfhour_id_dis = [[], [], [], [], []]
                 self.halfhour_id_time = [0] * 5
                 # 记录新单元
-                if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
+                if self.unit_dis >= self.small_thres[id] and self.unit_dis <= big_thres:
                     self.halfhour_id_dis[id].append(self.unit_dis)
                     self.halfhour_id_time[id] += 1
                 return
             else:
                 # 记录新单元
-                if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
+                if self.unit_dis >= self.small_thres[id] and self.unit_dis <= big_thres:
                     self.halfhour_id_dis[id].append(self.unit_dis)
                     self.halfhour_id_time[id] += 1
 
 
     def second_record(self, frame, id, i):
         if self.count_frame % eval_windows != 0:
-            if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
+            if self.unit_dis >= self.small_thres[id] and self.unit_dis <= big_thres:
                 self.second_id_dis[id].append(self.unit_dis)
                 self.second_id_time[id] += 1
                 self.file_id_v[id].append(self.unit_dis)
-            elif self.unit_dis < self.small_thres:
+            elif self.unit_dis < self.small_thres[id]:
                 self.second_id_rest_time[id] += 1
         else:
             if frame != int(self.data[i - 1, 0]):#避免更新单元重复计算
@@ -238,19 +238,19 @@ class Fun(object):
                 self.second_id_dis = [[], [], [], [], []]
                 self.second_id_time = [0] * 5
                 # 记录新单元
-                if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
+                if self.unit_dis >= self.small_thres[id] and self.unit_dis <= big_thres:
                     self.second_id_dis[id].append(self.unit_dis)
                     self.second_id_time[id] += 1
                     self.file_id_v[id].append(self.unit_dis)
-                elif self.unit_dis < self.small_thres:
+                elif self.unit_dis < self.small_thres[id]:
                     self.second_id_rest_time[id] += 1
                 return
             else:
                 # 记录新单元
-                if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
+                if self.unit_dis >= self.small_thres[id] and self.unit_dis <= big_thres:
                     self.second_id_dis[id].append(self.unit_dis)
                     self.second_id_time[id] += 1
-                elif self.unit_dis < self.small_thres:
+                elif self.unit_dis < self.small_thres[id]:
                     self.second_id_rest_time[id] += 1
 
                 # 单文件
@@ -305,6 +305,7 @@ if __name__ == '__main__':
     fun = Fun(path_input, result_path)
     fun.execute()
     workbook.close()
+
 # 分区间统计
 # from itertools import groupby
 #
