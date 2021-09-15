@@ -1,8 +1,9 @@
 import numpy as np
 import os
 import xlsxwriter as xls
+import math
 
-path_input = "j05"  # 源数据
+path_input = "z02"  # 源数据
 result_path = 'output'
 file_thres = 1000
 big_thres = 27
@@ -45,17 +46,30 @@ class Fun(object):
         self.var_x =[]
         self.var_y=[]
 
+        # 转弯
+        self.angle = [0.0] * 5  # 角度
+        self.swerves = [] # 转弯次数
+        self.swerve_px = [0.0] * 5
+        self.swerve_py = [0.0] * 5
+        self.swerve_angle1 = 0.0
+        self.swerve_angle = [0.0] * 5
+        self.swerve_k = [0] * 5
+        self.k = 0
+        #
+        self.small_thres = [0]*5
         self.count_frame = 0
 
+        self.file_id_v =[[], [], [], [], []]
+        self.file_id_i =[0] * 5
 
-        self.scale = 0
-        for line in scale_datas:
-            q = [x for x in line.split(' ')]
-            if q[0] == self.data_path:
-                width = q[3]
-                self.scale = 350 / int(width)
-                break
-        self.small_thres = 1 / self.scale - 0.6
+        # self.scale = 0
+        # for line in scale_datas:
+        #     q = [x for x in line.split(' ')]
+        #     if q[0] == self.data_path:
+        #         width = q[3]
+        #         self.scale = 350 / int(width)
+        #         break
+        # self.small_thres[id] = 1 / self.scale - 0.6
 
     def float2int(date):
         return int(date)
@@ -93,6 +107,7 @@ class Fun(object):
         self.tlwh[id][3] = self.data[i, 5]  # h
         self.x = self.tlwh[id][0] + self.tlwh[id][2] / 2
         self.y = self.tlwh[id][1] + self.tlwh[id][3] / 2
+        self.small_thres[id] = math.sqrt((self.tlwh[id][2] + self.tlwh[id][3]) / 100)
 
     def execute_datas(self):
         for i, line in enumerate(self.data):
@@ -106,6 +121,7 @@ class Fun(object):
                 self.count_frame += 1
             self.fishing_var(frame, id, i)
             self.second_record(frame, id, i)
+            self.swerve(id, i)
             self.halfhour_record(frame, id, i)
 
     def second_acceleration(self):
@@ -135,11 +151,43 @@ class Fun(object):
                         self.var_y.append(l + h/2)
 
     # def swerve(self):
+    def swerve(self,id,i):
+        if self.count_frame % eval_windows == 0:
+            dis = ((self.x - self.swerve_px[id]) ** 2 + (self.y - self.swerve_py[id]) ** 2) ** 0.5
+            if self.swerve_k[id] == 0:
+                self.swerve_px[id] = self.x
+                self.swerve_py[id] = self.y
+                self.swerve_k[id] = 1
+            elif self.swerve_k[id] == 1:
+                tan = math.atan2(self.y-self.swerve_py[id],self.x-self.swerve_px[id])
+
+                self.swerve_angle[id] = math.degrees(tan)
+                self.swerve_px[id] = self.x
+                self.swerve_py[id] = self.y
+                self.swerve_k[id] = 2
+            elif dis>= 6 and dis <= 1000:
+                tan = math.atan2(self.y-self.swerve_py[id], self.x-self.swerve_px[id])
+
+                self.swerve_angle1 = math.degrees(tan)
+                self.angle[id] += math.degrees(tan) - self.swerve_angle[id]
+                self.swerve_angle[id] = math.degrees(tan)
+                self.swerve_px[id] = self.x
+                self.swerve_py[id] = self.y
+
+
+            if round(self.angle[id],1) >=90.0 or round(self.angle[id],1) <= -90.0:
+                self.k +=1
+
+                self.angle[id] = 0.0
+                # print("{} ok".format(self.swerves))
+
+            if self.data[i,0] != self.data[i-1,0]:
+                self.swerves.append(self.k)
 
 
     def halfhour_record(self,frame,id,i):
         if self.count_frame % eval_big_windows != 0:
-            if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
+            if self.unit_dis >= self.small_thres[id] and self.unit_dis <= big_thres:
                 self.halfhour_id_dis[id].append(self.unit_dis)
                 self.halfhour_id_time[id] +=1
         else:
@@ -156,23 +204,23 @@ class Fun(object):
                 self.halfhour_id_dis = [[], [], [], [], []]
                 self.halfhour_id_time = [0] * 5
                 # 记录新单元
-                if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
+                if self.unit_dis >= self.small_thres[id] and self.unit_dis <= big_thres:
                     self.halfhour_id_dis[id].append(self.unit_dis)
                     self.halfhour_id_time[id] += 1
                 return
             else:
                 # 记录新单元
-                if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
+                if self.unit_dis >= self.small_thres[id] and self.unit_dis <= big_thres:
                     self.halfhour_id_dis[id].append(self.unit_dis)
                     self.halfhour_id_time[id] += 1
 
 
     def second_record(self, frame, id, i):
         if self.count_frame % eval_windows != 0:
-            if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
+            if self.unit_dis >= self.small_thres[id] and self.unit_dis <= big_thres:
                 self.second_id_dis[id].append(self.unit_dis)
                 self.second_id_time[id] += 1
-            elif self.unit_dis < self.small_thres:
+            elif self.unit_dis < self.small_thres[id]:
                 self.second_id_rest_time[id] += 1
         else:
             if frame != int(self.data[i - 1, 0]):#避免更新单元重复计算
@@ -191,19 +239,20 @@ class Fun(object):
                 # 重新初始化
                 self.second_id_dis = [[], [], [], [], []]
                 self.second_id_time = [0] * 5
+                self.second_id_rest_time=[0] * 5
                 # 记录新单元
-                if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
+                if self.unit_dis >= self.small_thres[id] and self.unit_dis <= big_thres:
                     self.second_id_dis[id].append(self.unit_dis)
                     self.second_id_time[id] += 1
-                elif self.unit_dis < self.small_thres:
+                elif self.unit_dis < self.small_thres[id]:
                     self.second_id_rest_time[id] += 1
                 return
             else:
                 # 记录新单元
-                if self.unit_dis >= self.small_thres and self.unit_dis <= big_thres:
+                if self.unit_dis >= self.small_thres[id] and self.unit_dis <= big_thres:
                     self.second_id_dis[id].append(self.unit_dis)
                     self.second_id_time[id] += 1
-                elif self.unit_dis < self.small_thres:
+                elif self.unit_dis < self.small_thres[id]:
                     self.second_id_rest_time[id] += 1
 
                 # 单文件
@@ -230,15 +279,17 @@ class Fun(object):
                 # self.each_file_distance.append(x_dis)
 
     def xls_writer(self):
-
         worksheet = workbook.add_worksheet("{}".format(self.data_path))
         #判断文件类型
+        heading = ['平均速度/s', '静息时间/s', '平均速度/0.5h','加速度/s','聚集程度','转弯次数']
+        worksheet.write_row('A1', heading)  # 需要判断哪个单元开始
 
-        worksheet.write_column('A1', self.second_v)  # 需要判断哪个单元开始
-        worksheet.write_column('B1', self.second_rest_time)
-        worksheet.write_column('C1', self.halfhour_v)
-        worksheet.write_column('D1',self.second_acc)
-        worksheet.write_column('E1',self.fish_var)
+        worksheet.write_column('A2', self.second_v)  # 需要判断哪个单元开始
+        worksheet.write_column('B2', self.second_rest_time)
+        worksheet.write_column('C2', self.halfhour_v)
+        worksheet.write_column('D2',self.second_acc)
+        worksheet.write_column('E2',self.fish_var)
+        worksheet.write_column('F2', self.swerves)
 
 
 if __name__ == '__main__':
