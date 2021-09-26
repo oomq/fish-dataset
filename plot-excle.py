@@ -188,6 +188,7 @@ class Fun(object):
         for ind,data in enumerate(self.exp_swr):
             # print(color[ind])
             ax5.scatter(x_zhou,self.exp_swr[ind], s=0.5, c=color[ind], marker='.')
+        plt.legend(loc='upper left', markerscale=15)
         plt.axvspan(xmin=-1.5, xmax=0.0, facecolor='m', alpha=0.3)
         plt.axvspan(xmin=0.0, xmax=20.0, facecolor='y', alpha=0.3)
         plt.axvspan(xmin=20.0, xmax=40.0, facecolor='b', alpha=0.3)
