@@ -3,9 +3,9 @@ import os
 import bisect
 import math
 import matplotlib.pyplot as plt
-from pyecharts.charts import HeatMap
-from pyecharts import options as opts
-from pyecharts.faker import Faker
+# from pyecharts.charts import HeatMap
+# from pyecharts import options as opts
+# from pyecharts.faker import Faker
 
 import seaborn as sns
 sns.set()
@@ -13,13 +13,10 @@ sns.set()
 data_path = r'test'
 result_path = r'test'
 
-name_list = ["self.liyu","self.lianyu","self.heiyu","self.caoyu"]
-# name_list = ["liyu","lianyu","heiyu","caoyu"]
+# name_list = ["self.liyu","self.lianyu","self.heiyu","self.caoyu"]
+
 class Track(object):
     def __init__(self):
-        # self.dis_ob1 = []
-        # self.dis_ob2 = []
-        # self.dis_ob3 = []
         self.dis_ob= {'1':[],'2':[],'3':[]}
         self.rest_time = []
         self.rest_time_flag = 0
@@ -35,10 +32,12 @@ class Fun(object):
         self.count_frame = 0
         self.tlwh = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
         self.small_thres = [0] * 5
-        self.lianyu = Track()
-        self.heiyu = Track()
-        self.liyu = Track()
-        self.caoyu = Track()
+        self.name_list = ["liyu","lianyu","heiyu","caoyu"]
+        self.fish = locals()
+        for _name in self.name_list:
+            self.fish[_name] = Track()
+
+
 
         ##hotmap
         self.hotmap_mat = np.zeros((10,19),dtype='int32')
@@ -56,12 +55,26 @@ class Fun(object):
             self.data = np.loadtxt(data_path+"/{}".format(file), delimiter=',')
             print(num, file)
             self.execute_datas()
+            if num == 1:#看对比组和实验组有多少个txt
+                lianyu_v = np.mean(self.lianyu.v_frame) * 25
+                liyu_v = np.mean(self.liyu.v_frame) * 25
+                caoyu_v = np.mean(self.caoyu.v_frame) * 25
+                heiyu_v = np.mean(self.heiyu.v_frame) * 25
+                self.lianyu.v_frame = []
+                self.liyu.v_frame = []
+                self.caoyu.v_frame = []
+                self.heiyu.v_frame = []
+                print('record')
 
         plt.figure(figsize=(10, 5))
-        plt.bar("lianyu", [np.mean(self.lianyu.v_frame) * 25, ], width=0.5)
-        plt.bar("caoyu", [np.mean(self.caoyu.v_frame) * 25, ], width=0.5)
-        plt.bar("liyu", [np.mean(self.liyu.v_frame) * 25, ], width=0.5)
-        plt.bar("heiyu", [np.mean(self.heiyu.v_frame) * 25, ], width=0.5)
+        plt.bar("spotted silver carp(C)", lianyu_v, width=0.5,color= 'b') #鲢鱼
+        plt.bar("spotted silver carp(E)", [np.mean(self.lianyu.v_frame) * 25, ], width=0.5,color= 'r')
+        plt.bar("grass carp(C)", liyu_v,  width=0.5,color= 'b') #草鱼
+        plt.bar("grass carp(E)", [np.mean(self.caoyu.v_frame) * 25, ], width=0.5,color= 'r')  # 草鱼
+        plt.bar("carp(C)", caoyu_v , width=0.5,color= 'b')#鲤鱼
+        plt.bar("carp(E)", [np.mean(self.liyu.v_frame) * 25, ], width=0.5,color= 'r')
+        plt.bar("hybrid snakehead(C)", heiyu_v , width=0.5,color= 'b')#杂交鳢
+        plt.bar("hybrid snakehead(E)", [np.mean(self.heiyu.v_frame) * 25, ], width=0.5,color= 'r')
         plt.ylabel("V/(px/s)")
         plt.xlabel("Name")
         plt.savefig("output.jpg", )
@@ -159,45 +172,26 @@ class Fun(object):
 
 
     def each_dis(self,cxcy):
-        # for col,name in enumerate(name_list):
-        #     x = cxcy[col,0]
-        #     y = cxcy[col,1]
-        #     for iteration_time in range(col+1,4):
-        #         dis = ((x - cxcy[iteration_time,1]) ** 2 + (y - cxcy[iteration_time,1]) ** 2) ** 0.5
+
         each_dis_mat = np.zeros((4,4),dtype='int32')#初始化4*4二维矩阵存相对距离
         for col in range(0,4):
             for row  in range(0,4):
                 each_dis_mat[col,row] = ((cxcy[col,0]-cxcy[row,0])**2+
                                          (cxcy[col, 0] - cxcy[row, 0])**2)*0.5
 
-
-        # self.lianyu.dis_ob1.append(each_dis_mat[0,1])
-        # self.lianyu.dis_ob2.append(each_dis_mat[0, 2])
-        # self.lianyu.dis_ob3.append(each_dis_mat[0, 3])
-        #
-        # self.heiyu.dis_ob1.append(each_dis_mat[1,0])
-        # self.heiyu.dis_ob2.append(each_dis_mat[1, 2])
-        # self.heiyu.dis_ob3.append(each_dis_mat[1, 3])
-        #
-        # self.liyu.dis_ob1.append(each_dis_mat[2,0])
-        # self.liyu.dis_ob2.append(each_dis_mat[2, 1])
-        # self.liyu.dis_ob3.append(each_dis_mat[2, 3])
-        #
-        # self.caoyu.dis_ob1.append(each_dis_mat[3,0])
-        # self.caoyu.dis_ob2.append(each_dis_mat[3, 1])
-        # self.caoyu.dis_ob3.append(each_dis_mat[3, 2])
-        #name_list = ["self.liyu","self.lianyu","self.heiyu","self.caoyu"]
-        for name_num,name in enumerate(name_list):
+        for name_num, name in enumerate(self.name_list):
             string = [0, 1, 2, 3]
             string.remove(name_num)
-            for num,string_col in enumerate(string):
-
-                # locals()[name].dis_ob[str(num+1)].append(each_dis_mat[name_num,string_col])
-                eval(name +".dis_ob[str(num+1)].append(each_dis_mat[name_num,string_col])")
-                print(name +".dis_ob[str(num+1)].append(each_dis_mat[name_num,string_col])")
-
+            print(locals())
+            for num, string_col in enumerate(string):
+                # idea 1
+                self.fish[name].dis_ob[str(num+1)].append(each_dis_mat[name_num,string_col])
+                # idea 2
+                # eval("self."+name + ".dis_ob[str(num+1)].append(each_dis_mat[name_num,string_col])")
+                # print("self."+name + ".dis_ob[str(num+1)].append(each_dis_mat[name_num,string_col])")
 
         print('d')
+
 
 
 
