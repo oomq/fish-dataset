@@ -158,6 +158,11 @@ class Fun(object):
         for name_num, name in enumerate(self.name_list):
             locals()[name].v_frame.append((v_dis_mat[name_num,0]**2 + v_dis_mat[name_num,1]**2)**0.5)
 
+    def each_rest_time(self,v_dis_mat):
+        for name_num, name in enumerate(self.name_list):
+
+
+
 
     def plot_hotmap(self):##没运行过
         for _name in self.name_list:
@@ -205,7 +210,8 @@ class Fun(object):
             each_fish_mat[limy1:limy2,limx1:limx2] = 0
             self.fish[_name].close_box_time.append(np.sum(each_fish_mat))
 
-    def 
+
+
 
 
 
