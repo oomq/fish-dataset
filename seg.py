@@ -2,18 +2,75 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 # TRIANGLE阈值处理
-filename = 'black'
-src = cv2.imread(r'test/{}.jpg'.format(filename), cv2.IMREAD_GRAYSCALE)
+filename = 'four'
+src = cv2.imread(r'test/{}.png'.format(filename), cv2.IMREAD_GRAYSCALE)
 #裁剪边缘，以免影响连通域面积
-x1 = 100
-x2 = 1800
-y1 = 30
-src = src[y1:,x1:x2]
+# x1 = 100
+# x2 = 1800
+# y1 = 30
+# src = src[y1:,x1:x2]
+# src = cv2.GaussianBlur(src, (101, 101), 1)
 src = cv2.blur(src,(5,5))
+cv2.imshow('Canny-ori', src)
+import cv2
+import numpy as np
 
-triThe = 90
+
+# img = cv2.GaussianBlur(src, (3, 3), 0)  # 用高斯平滑处理原图像降噪。
+canny = cv2.Canny(src, 20, 50)  # 最大最小阈值
+
+cv2.imshow('Canny', canny)
+
+cross = cv2.getStructuringElement(cv2.MORPH_CROSS,(5, 5))
+diamond = cv2.getStructuringElement(cv2.MORPH_RECT,(3, 3))
+result1 = cv2.dilate(canny,cross)
+
+cv2.imshow('Canny-cross', result1)
+result2 = cv2.erode(result1, diamond)
+cv2.imshow('Canny-diamond', result2)
+
+result1 = cv2.dilate(result2,cross)
+cv2.imshow('Canny-cross1', result1)
+result2 = cv2.erode(result1, diamond)
+cv2.imshow('Canny-diamond1', result2)
+cross = cv2.getStructuringElement(cv2.MORPH_CROSS,(7, 7))
+result1 = cv2.dilate(result2,cross)
+cv2.imshow('Canny-cross1', result1)
+
+
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+# img = src
+# x = cv2.Sobel(img, cv2.CV_16S, 1, 0)
+# y = cv2.Sobel(img, cv2.CV_16S, 0, 1)
+#
+# absX = cv2.convertScaleAbs(x)  # 转回uint8
+# absY = cv2.convertScaleAbs(y)
+#
+# dst = cv2.addWeighted(absX, 0.5, absY, 0.5, 0)
+#
+# cv2.imshow("absX", absX)
+# cv2.imshow("absY", absY)
+#
+# cv2.imshow("Result", dst)
+#
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
+
+
+
+
+triThe = 120
 maxval = 255
+#做一个滑动条调整阈值
+
+
+
+
+
 triThe, dst_tri = cv2.threshold(src, triThe, maxval,cv2.THRESH_BINARY_INV)#cv2.THRESH_TRIANGLE + cv2.THRESH_BINARY
+# dst_tri =cv2.adaptiveThreshold(src,255, cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY_INV,51,1)
 
 # triThe1, dst_tri = cv2.threshold(src, triThe, maxval, cv2.THRESH_TRIANGLE + cv2.THRESH_BINARY_INV)
 print(triThe)
