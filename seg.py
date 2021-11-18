@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 # TRIANGLE阈值处理
 filename = 'five'
 # src = cv2.imread(r'test/{}.png'.format(filename), cv2.IMREAD_GRAYSCALE)
-img = cv2.imread(r'test/{}.png'.format(filename), 1)
+img = cv2.imread(r'test/{}.png'.format(filename))
 src = img[:,:,2]
 
 
@@ -25,26 +25,22 @@ import numpy as np
 # img = cv2.GaussianBlur(src, (3, 3), 0)  # 用高斯平滑处理原图像降噪。
 canny = cv2.Canny(src, 20, 50)  # 最大最小阈值
 cv2.imshow('Canny', canny)
-
 cross = cv2.getStructuringElement(cv2.MORPH_CROSS,(5, 5))
 diamond = cv2.getStructuringElement(cv2.MORPH_RECT,(3 , 3))
 result1 = cv2.dilate(canny,cross)
 cv2.imshow('Canny-cross', result1)
 result2 = cv2.erode(result1, diamond)
 cv2.imshow('Canny-diamond', result2)
-
 cross = cv2.getStructuringElement(cv2.MORPH_CROSS,(7, 7))
 result1 = cv2.dilate(result2,cross)
 cv2.imshow('Canny-cross1', result1)
 result2 = cv2.erode(result1, diamond)
 cv2.imshow('Canny-diamond1', result2)
-
 result1 = cv2.dilate(result2,cross)
 cv2.imshow('Canny-cross2', result1)
 diamond = cv2.getStructuringElement(cv2.MORPH_RECT,(5, 5))
 result2 = cv2.erode(result1, diamond)
 cv2.imshow('Canny-diamond2', result2)
-
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 '''
@@ -84,8 +80,8 @@ print(triThe)
 
 
 # cv2.imshow('thresh_out1', dst_tri1)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
 
 num,labels= cv2.connectedComponents(dst_tri,4)
 
@@ -116,8 +112,8 @@ print(areamax)
 # nrr =  ((labels == 1) | (labels == 2)  | (labels == 3) )
 
 current_axis = plt.gca()
-plt.imshow(labels)
-plt.show()
+# plt.imshow(labels)
+# plt.show()
 print('d')
 ###遍历连通域矩阵过滤小面积的噪声
 for col,col_val in enumerate(labels) :
@@ -125,8 +121,8 @@ for col,col_val in enumerate(labels) :
         if not row_val in areamax:
             labels[col,row] = 0
 
-plt.imshow(labels)
-plt.show()
+# plt.imshow(labels)
+# plt.show()
 
 for col,col_val in enumerate(src) :
     for row,row_val in enumerate(col_val):
@@ -144,16 +140,15 @@ result2 = cv2.erode(result1, diamond)
 result1 = cv2.dilate(result2,cross)
 diamond = cv2.getStructuringElement(cv2.MORPH_RECT,(5, 5))
 result2 = cv2.erode(result1, diamond)
-cv2.imshow('Canny', result2)
-
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+# cv2.imshow('Canny', result2)
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
 
 canny_mat = labels - result2/255
 
-cv2.imshow('Canny', canny_mat)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+# cv2.imshow('Canny', canny_mat)
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
 canny_mat[canny_mat<1] =0
 canny_mat=canny_mat.astype(np.int8)
 
@@ -173,12 +168,26 @@ plt.imshow(canny_labels)
 plt.show()
 mask_label=canny_labels.copy()
 mask_label[mask_label > 1] = 0###把2 改成1
-plt.imshow(mask_label)
+mask_label=mask_label.astype(np.uint8)
+cross = cv2.getStructuringElement(cv2.MORPH_CROSS,(7, 7))
+mask_label_cross = cv2.dilate(mask_label,cross)
+
+other = labels-mask_label_cross
+other=other.astype(np.uint8)
+
+plt.imshow(other)
 plt.show()
-masked_pic = cv2.add(img, np.zeros(np.shape(img), dtype=np.uint8), mask=mask_label)
+plt.imshow(mask_label_cross)
+plt.show()
+masked_pic = cv2.add(img, np.zeros(np.shape(img), dtype=np.uint8), mask=mask_label_cross)
+masked_pic2 = cv2.add(img, np.zeros(np.shape(img), dtype=np.uint8), mask=other)
 plt.imshow(masked_pic)
 plt.show()
+plt.imshow(masked_pic2)
+plt.show()
 print('dd')
+
+
 
 #找到》thres的index 然后计算连通域的包围框后，
 # bbox =[]
