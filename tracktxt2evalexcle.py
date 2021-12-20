@@ -3,6 +3,7 @@ import os
 import bisect
 import math
 import matplotlib.pyplot as plt
+
 # from pyecharts.charts import HeatMap
 # from pyecharts import options as opts
 # from pyecharts.faker import Faker
@@ -10,7 +11,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set()
 
-data_path = r'test'
+data_path = r'1023'
 result_path = r'test'
 
 # name_list = ["self.liyu","self.lianyu","self.heiyu","self.caoyu"]
@@ -18,7 +19,7 @@ result_path = r'test'
 class Track(object):
     def __init__(self):
         self.dis_ob= {'1':[],'2':[],'3':[]}
-        self.rest_time = []
+        self.rest_time_frame = 0
         self.rest_time_flag = 0
         self.close_box_time = []
         self.v_frame =[]
@@ -30,58 +31,75 @@ class Track(object):
 
 
 class Fun(object):
-    def __init__(self, data_path, result_path):
+    def __init__(self, data_path_ori, data_base_name, result_path):
         super().__init__()
-        self.data_path = data_path
+        self.data_path_ori = data_path_ori
+        self.data_base_name = data_base_name
         self.result_path = result_path
-
+        ###定义
         self.x = 0
         self.y = 0
         self.count_frame = 0
         self.tlwh = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
         self.small_thres = [0] * 4
-
-        self.name_list = ["liyu","lianyu","heiyu","caoyu"]
+        self.name_list = ["lianyu", "heiyu", "liyu", "caoyu"]
         self.fish = locals()
         for _name in self.name_list:#外部类实例化
             self.fish[_name] = Track()
 
+        ###阈值设置
+        self.rest_thres = 0
+
+        ##创建画布
+        self.plt_v = plt.figure()
+        plt.ylabel("V/(px/s)")
+        plt.xlabel("Name")
+        self.x_c = [0,2,4,6]
+        self.x_e = [0.5,2.5,4.5,6.5]
+        # plt.xticks([1,2,3,4],["silver carp","grass carp","carp","b"])
     def tlwh2xy(self):#list->matrix
         ret = np.array(self.tlwh.copy())
         ret[:,:2] += (ret[:,2:])/2
         return ret[:,:2]
 
     def execute(self):  #处理一小时的txt
-        for num,file in enumerate(os.listdir(data_path)):
-            self.data = np.loadtxt(data_path+"/{}".format(file), delimiter=',')
-            print(num, file)
-            self.execute_datas()
-            if num == 1: #看对比组和实验组有多少个txt
-                lianyu_v = np.mean(self.fish['lianyu'].v_frame) * 25  #如下也是一样改成这样
-                liyu_v = np.mean(self.fish['liyu'].v_frame) * 25
-                caoyu_v = np.mean(self.fish['caoyu'].v_frame) * 25
-                heiyu_v = np.mean(self.fish['heiyu'].v_frame) * 25
-                for name_num, name in enumerate(self.name_list):
-                    self.fish[name].v_frame = []
-                print('record')
-        self.plot_hotmap()
+        for self.class_name in ["C","E"]:
+            txt_folder_path = self.data_path_ori + self.class_name + "/{}".format(self.data_base_name)
+            for num,file in enumerate(os.listdir(txt_folder_path)):
+                self.data = np.loadtxt(txt_folder_path+"/{}".format(file), delimiter=',')
+                print(num, file)
+                self.execute_datas()
 
+            #画图
+            # self.plot_hotmap()
+            self.plot_v(self.class_name)
 
+            # 初始化
+            for _name in self.name_list:  # 外部类实例化
+                self.fish[_name] = Track()
 
-    def plot(self):##待改
-        pass
-        plt.figure(figsize=(10, 5))
-        plt.bar("spotted silver carp(E)", [np.mean(self.lianyu.v_frame) * 25, ], width=0.5,color= 'r')
-        plt.bar("grass carp(C)", liyu_v,  width=0.5,color= 'b') #草鱼
-        plt.bar("grass carp(E)", [np.mean(self.caoyu.v_frame) * 25, ], width=0.5,color= 'r')  # 草鱼
-        plt.bar("carp(C)", caoyu_v , width=0.5,color= 'b')#鲤鱼
-        plt.bar("carp(E)", [np.mean(self.liyu.v_frame) * 25, ], width=0.5,color= 'r')
-        plt.bar("hybrid snakehead(C)", heiyu_v , width=0.5,color= 'b')#杂交鳢
-        plt.bar("hybrid snakehead(E)", [np.mean(self.heiyu.v_frame) * 25, ], width=0.5,color= 'r')
-        plt.ylabel("V/(px/s)")
-        plt.xlabel("Name")
-        plt.savefig("output.jpg", )
-        plt.show()
+    def plot_hotmap(self):##没运行过
+        for _name in self.name_list:
+            x_axis = self.fish[_name].hotmap_width
+            y_axis = self.fish[_name].hotmap_highth
+            fig = plt.figure()
+            sns_plot = sns.heatmap(self.fish[_name].hotmap_mat, cmap="RdBu_r", linewidths=.5)
+                                   # vmin=0, vmax=24000
+            # annot=True, fmt="d"####画图参数 显示数字、类型是int
+            # fig.savefig("heatmap.pdf", bbox_inches='tight') # 减少边缘空白
+            plt.show()
+
+    def plot_v(self, class_name,):##待改
+        if class_name == "C":
+            for x_label in range(0,4):
+                plt.bar(self.x_c[x_label],np.mean(self.fish[self.name_list[math.floor(x_label)]].v_frame) * 25,width=0.5,color='r')
+            # plt.show()
+
+        elif class_name == "E":
+            for x_label in range(0,4):
+                plt.bar(self.x_e[x_label],np.mean(self.fish[self.name_list[math.floor(x_label)]].v_frame) * 25,width=0.5,color='b')
+            plt.show()
+            self.plt_v.savefig("output.jpg", )
 
     def renewtlwh(self, i):
         id = int(self.data[i, 1]) - 1
@@ -104,10 +122,9 @@ class Fun(object):
         self.y = self.tlwh[id][1] + self.tlwh[id][3] / 2
         self.small_thres[id] = math.sqrt((self.tlwh[id][2] + self.tlwh[id][3]) / 100)
 
-
     def execute_datas(self):
         flag = 0
-        for i, line in enumerate(self.data):
+        for i, line in enumerate(self.data):# data（txt）
             #初始化
             self.renewtlwh(i)
             if self.data[i, 0] in range(1, 3):  # 初始化前两帧 帧从2开始 warning
@@ -125,11 +142,13 @@ class Fun(object):
                     flag = 1
                 self.each_dis(cxcy)
                 self.count_frame += 1
-                self.each_v(pcxcy,cxcy)
+                v_dis_mat = cxcy - pcxcy  #v_dis_mat：这帧减上一帧中心点
+                self.each_v(v_dis_mat)
+                self.each_rest_time(v_dis_mat)
+                self.each_close_wall_time()
                 pcxcy = cxcy
         # print('d')
         # self.each_avg_v()
-
 
     def avg_tools(self,list, frame_interval):#求平均函数
         n = len(list) % frame_interval
@@ -151,8 +170,7 @@ class Fun(object):
         for name_num, name in enumerate(self.name_list):
             self.fish[name].v_frame = self.avg_tools(self.fish[name].v_frame, frame_interval=25 * 60 * 35)
 
-    def each_v(self,pcxcy,cxcy):
-        v_dis_mat = cxcy-pcxcy
+    def each_v(self,v_dis_mat):
         # self.lianyu.v_frame.append((v_dis_mat[0,0]**2 + v_dis_mat[0,1]**2)**0.5)
         # self.heiyu.v_frame.append((v_dis_mat[1,0]**2 + v_dis_mat[1,1]**2)**0.5)
         # self.liyu.v_frame.append((v_dis_mat[2,0]**2 + v_dis_mat[2,1]**2)**0.5)
@@ -162,28 +180,14 @@ class Fun(object):
 
     def each_rest_time(self,v_dis_mat):
         for name_num, name in enumerate(self.name_list):
-            pass
-
-
-
-
-    def plot_hotmap(self):##没运行过
-        for _name in self.name_list:
-            x_axis = self.fish[_name].hotmap_width
-            y_axis = self.fish[_name].hotmap_highth
-            fig = plt.figure()
-            sns_plot = sns.heatmap(self.fish[_name].hotmap_mat, cmap="RdBu_r", linewidths=.5)
-                                   # vmin=0, vmax=24000
-            # annot=True, fmt="d"####画图参数 显示数字、类型是int
-            # fig.savefig("heatmap.pdf", bbox_inches='tight') # 减少边缘空白
-            plt.show()
+            if (v_dis_mat[name_num,0]**2 + v_dis_mat[name_num,1]**2)**0.5 <= self.rest_thres:
+                self.fish[name].rest_time_frame +=1
 
     def each_hotmap(self,id):
         _name = self.name_list[id]
         hotmap_x = bisect.bisect(self.fish[_name].hotmap_width,self.x)#找x，y在哪个网格
         hotmap_y = bisect.bisect(self.fish[_name].hotmap_highth,self.y)
         self.fish[_name].hotmap_mat[hotmap_y,hotmap_x] += 1
-
 
     def each_dis(self,cxcy):
         each_dis_mat = np.zeros((4,4),dtype='int32')#初始化4*4二维矩阵存相对距离
@@ -203,7 +207,6 @@ class Fun(object):
                 # print("self."+name + ".dis_ob[str(num+1)].append(each_dis_mat[name_num,string_col])")
 
         # print('d')
-
     def each_close_wall_time(self):
         #思路是把热图矩阵中间区域置0，直接求和计算贴壁的帧的总数
         limx1,limy1= 4,1#没调试贴壁空间
@@ -214,10 +217,11 @@ class Fun(object):
             self.fish[_name].close_box_time.append(np.sum(each_fish_mat))
 
 
-
-
-
-
 if __name__ == '__main__':
-    fun = Fun(data_path, result_path)
-    fun.execute()
+    data_path_ori = r'plt/{}'.format(data_path)
+    for test,data_path_basename in enumerate(os.listdir(data_path_ori+"C")): #用data_path 里判断文件名后直接用C+E去找
+        if test ==1:
+            break
+        fun = Fun(data_path_ori,data_path_basename, result_path)
+        fun.execute()
+
