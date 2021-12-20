@@ -12,7 +12,7 @@ import seaborn as sns
 sns.set()
 
 data_path = r'1023'
-result_path = r'test'
+result_path = r'output/'
 
 # name_list = ["self.liyu","self.lianyu","self.heiyu","self.caoyu"]
 
@@ -56,6 +56,8 @@ class Fun(object):
         plt.xlabel("Name")
         self.x_c = [0,2,4,6]
         self.x_e = [0.5,2.5,4.5,6.5]
+        self.label = ["silver carp","hybrid snakehead","carp","grass carp",]
+        plt.xticks(self.x_e+[0.25]*4,self.label)
         # plt.xticks([1,2,3,4],["silver carp","grass carp","carp","b"])
     def tlwh2xy(self):#list->matrix
         ret = np.array(self.tlwh.copy())
@@ -71,8 +73,9 @@ class Fun(object):
                 self.execute_datas()
 
             #画图
-            # self.plot_hotmap()
             self.plot_v(self.class_name)
+            self.plot_hotmap()
+
 
             # 初始化
             for _name in self.name_list:  # 外部类实例化
@@ -87,7 +90,9 @@ class Fun(object):
                                    # vmin=0, vmax=24000
             # annot=True, fmt="d"####画图参数 显示数字、类型是int
             # fig.savefig("heatmap.pdf", bbox_inches='tight') # 减少边缘空白
-            plt.show()
+            # plt.show()
+            fig.savefig("{}/{}.jpg".format(self.result_path,data_path+self.class_name+self.data_base_name+_name))
+
 
     def plot_v(self, class_name,):##待改
         if class_name == "C":
@@ -98,8 +103,24 @@ class Fun(object):
         elif class_name == "E":
             for x_label in range(0,4):
                 plt.bar(self.x_e[x_label],np.mean(self.fish[self.name_list[math.floor(x_label)]].v_frame) * 25,width=0.5,color='b')
-            plt.show()
-            self.plt_v.savefig("output.jpg", )
+            # plt.show()
+            self.plt_v.savefig("V_{}/{}.jpg".format(self.result_path,data_path+self.data_base_name))
+
+    def plot_rest_time(self,):
+        pass
+
+        if class_name == "C":
+            for x_label in range(0, 4):
+                plt.bar(self.x_c[x_label], np.mean(self.fish[self.name_list[math.floor(x_label)]].rest_time_frame) * 25, width=0.5,
+                        color='r')
+            # plt.show()
+
+        elif class_name == "E":
+            for x_label in range(0, 4):
+                plt.bar(self.x_e[x_label], np.mean(self.fish[self.name_list[math.floor(x_label)]].rest_time_frame) * 25, width=0.5,
+                        color='b')
+            # plt.show()
+            self.plt_v.savefig("Rest_{}/{}.jpg".format(self.result_path, data_path + self.data_base_name))
 
     def renewtlwh(self, i):
         id = int(self.data[i, 1]) - 1
@@ -220,8 +241,7 @@ class Fun(object):
 if __name__ == '__main__':
     data_path_ori = r'plt/{}'.format(data_path)
     for test,data_path_basename in enumerate(os.listdir(data_path_ori+"C")): #用data_path 里判断文件名后直接用C+E去找
-        if test ==1:
-            break
+        # if test ==1:
+        #     break
         fun = Fun(data_path_ori,data_path_basename, result_path)
         fun.execute()
-
