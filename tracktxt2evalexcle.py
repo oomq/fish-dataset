@@ -22,6 +22,7 @@ class Track(object):
         self.rest_time_frame = 0
         self.rest_time_flag = 0
         self.close_box_time = []
+        self.dis  = []
         self.v_frame =[]
 
         ##hotmap
@@ -44,20 +45,19 @@ class Fun(object):
         self.small_thres = [0] * 4
         self.name_list = ["lianyu", "heiyu", "liyu", "caoyu"]
         self.fish = locals()
+
         for _name in self.name_list:#外部类实例化
             self.fish[_name] = Track()
+            
 
         ###阈值设置
         self.rest_thres = 0
 
         ##创建画布
-        self.plt_v = plt.figure()
-        plt.ylabel("V/(px/s)")
-        plt.xlabel("Name")
         self.x_c = [0,2,4,6]
         self.x_e = [0.5,2.5,4.5,6.5]
         self.label = ["silver carp","hybrid snakehead","carp","grass carp",]
-        plt.xticks(self.x_e+[0.25]*4,self.label)
+
         # plt.xticks([1,2,3,4],["silver carp","grass carp","carp","b"])
     def tlwh2xy(self):#list->matrix
         ret = np.array(self.tlwh.copy())
@@ -74,12 +74,63 @@ class Fun(object):
 
             #画图
             self.plot_v(self.class_name)
+            self.plot_rest_time(self.class_name)
             self.plot_hotmap()
-
-
+            self.plot_close_wall_time(self.class_name)
+            self.plot_each_dis(self.class_name)
+            self.plot_fulldis(self.class_name)
             # 初始化
             for _name in self.name_list:  # 外部类实例化
                 self.fish[_name] = Track()
+
+    def plot_each_dis(self,class_name):
+        for _name in self.name_list:
+            if class_name == "C":
+                self.plt_each_dis[_name] = plt.figure(num="dis{}".format(_name))
+                plt.ylabel("close_dis/(px/s)")
+                plt.xlabel("Name")
+                plt.xticks(self.x_e + [0.25] * 4, self.label)
+                for x_label in range(1,4):
+                    plt.bar(self.x_c[x_label],np.mean(self.fish[_name].dis_ob[str(x_label)]) * 25,width=0.5,color='r')
+                # plt.show()
+            elif class_name == "E":
+                plt.figure(num="dis{}".format(_name))
+                for x_label in range(1,4):
+                    plt.bar(self.x_e[x_label],np.mean(self.fish[_name].dis_ob[str(x_label)]) * 25,width=0.5,color='b')
+                # plt.show()
+                self.plt_each_dis[_name].savefig("{}/dis_{}.jpg".format(self.result_path,data_path+self.data_base_name+_name))
+
+    def plot_fulldis(self,class_name):
+        if class_name == "C":
+            self.plt_fulldis = plt.figure(num="fulldis")
+            plt.ylabel("dis/(px/s)")
+            plt.xlabel("Name")
+            plt.xticks(self.x_e + [0.25] * 4, self.label)
+            for x_label in range(0,4):
+                plt.bar(self.x_c[x_label],np.mean(self.fish[self.name_list[math.floor(x_label)]].dis) * 25,width=0.5,color='r')
+            # plt.show()
+        elif class_name == "E":
+            plt.figure(num="fulldis")
+            for x_label in range(0,4):
+                plt.bar(self.x_e[x_label],np.mean(self.fish[self.name_list[math.floor(x_label)]].close_box_time) * 25,width=0.5,color='b')
+            # plt.show()
+            self.plt_fulldis.savefig("{}/fulldis_{}.jpg".format(self.result_path,data_path+self.data_base_name))
+
+    def plot_close_wall_time(self,class_name):
+        if class_name == "C":
+            self.plt_close_wall_time = plt.figure(num="close_wall_time")
+            plt.ylabel("time/(px/s)")
+            plt.xlabel("Name")
+            plt.xticks(self.x_e + [0.25] * 4, self.label)
+            for x_label in range(0,4):
+                plt.bar(self.x_c[x_label],np.mean(self.fish[self.name_list[math.floor(x_label)]].close_box_time) * 25,width=0.5,color='r')
+            # plt.show()
+        elif class_name == "E":
+            plt.figure(num="close_wall_time")
+            for x_label in range(0,4):
+                plt.bar(self.x_e[x_label],np.mean(self.fish[self.name_list[math.floor(x_label)]].close_box_time) * 25,width=0.5,color='b')
+            # plt.show()
+            self.plt_close_wall_time.savefig("{}/close_{}.jpg".format(self.result_path,data_path+self.data_base_name))
 
     def plot_hotmap(self):##没运行过
         for _name in self.name_list:
@@ -95,32 +146,40 @@ class Fun(object):
 
 
     def plot_v(self, class_name,):##待改
+
         if class_name == "C":
+            self.plt_v = plt.figure(num= "v")
+            plt.ylabel("V/(px/s)")
+            plt.xlabel("Name")
+            plt.xticks(self.x_e + [0.25] * 4, self.label)
             for x_label in range(0,4):
                 plt.bar(self.x_c[x_label],np.mean(self.fish[self.name_list[math.floor(x_label)]].v_frame) * 25,width=0.5,color='r')
             # plt.show()
 
         elif class_name == "E":
+            plt.figure(num="v")
             for x_label in range(0,4):
                 plt.bar(self.x_e[x_label],np.mean(self.fish[self.name_list[math.floor(x_label)]].v_frame) * 25,width=0.5,color='b')
             # plt.show()
-            self.plt_v.savefig("V_{}/{}.jpg".format(self.result_path,data_path+self.data_base_name))
+            self.plt_v.savefig("{}/V_{}.jpg".format(self.result_path,data_path+self.data_base_name))
 
-    def plot_rest_time(self,):
-        pass
-
+    def plot_rest_time(self,class_name):
         if class_name == "C":
+            self.plt_rest_time = plt.figure(num="rest_time")
+            plt.ylabel("rest/(px/s)")
+            plt.xlabel("Name")
+            plt.xticks(self.x_e + [0.25] * 4, self.label)
             for x_label in range(0, 4):
                 plt.bar(self.x_c[x_label], np.mean(self.fish[self.name_list[math.floor(x_label)]].rest_time_frame) * 25, width=0.5,
                         color='r')
             # plt.show()
-
         elif class_name == "E":
+            plt.figure(num="rest_time")
             for x_label in range(0, 4):
                 plt.bar(self.x_e[x_label], np.mean(self.fish[self.name_list[math.floor(x_label)]].rest_time_frame) * 25, width=0.5,
                         color='b')
             # plt.show()
-            self.plt_v.savefig("Rest_{}/{}.jpg".format(self.result_path, data_path + self.data_base_name))
+            self.plt_rest_time.savefig("{}/Rest_{}.jpg".format(self.result_path, data_path + self.data_base_name))
 
     def renewtlwh(self, i):
         id = int(self.data[i, 1]) - 1
@@ -161,13 +220,14 @@ class Fun(object):
                 if flag == 0:
                     pcxcy = cxcy
                     flag = 1
-                self.each_dis(cxcy)
+                self.each_close_dis(cxcy)
                 self.count_frame += 1
                 v_dis_mat = cxcy - pcxcy  #v_dis_mat：这帧减上一帧中心点
                 self.each_v(v_dis_mat)
                 self.each_rest_time(v_dis_mat)
-                self.each_close_wall_time()
                 pcxcy = cxcy
+        self.each_close_wall_time()
+
         # print('d')
         # self.each_avg_v()
 
@@ -199,6 +259,10 @@ class Fun(object):
         for name_num, name in enumerate(self.name_list):
             self.fish[name].v_frame.append((v_dis_mat[name_num,0]**2 + v_dis_mat[name_num,1]**2)**0.5)
 
+    def ecah_fulldis(self,v_dis_mat):
+        for name_num, name in enumerate(self.name_list):
+            self.fish[name].dis.append((v_dis_mat[name_num,0]**2 + v_dis_mat[name_num,1]**2)**0.5)
+
     def each_rest_time(self,v_dis_mat):
         for name_num, name in enumerate(self.name_list):
             if (v_dis_mat[name_num,0]**2 + v_dis_mat[name_num,1]**2)**0.5 <= self.rest_thres:
@@ -210,13 +274,12 @@ class Fun(object):
         hotmap_y = bisect.bisect(self.fish[_name].hotmap_highth,self.y)
         self.fish[_name].hotmap_mat[hotmap_y,hotmap_x] += 1
 
-    def each_dis(self,cxcy):
+    def each_close_dis(self,cxcy):
         each_dis_mat = np.zeros((4,4),dtype='int32')#初始化4*4二维矩阵存相对距离
         for col in range(0,4):#循环计算各个点与其他点的距离（包括自身）
             for row  in range(0,4):
                 each_dis_mat[col,row] = ((cxcy[col,0]-cxcy[row,0])**2+
                                          (cxcy[col, 0] - cxcy[row, 0])**2)*0.5
-
         for name_num, name in enumerate(self.name_list):
             string = [0, 1, 2, 3]
             string.remove(name_num) #除掉自身的数据保存在其他dis_obx的属性里
@@ -241,7 +304,7 @@ class Fun(object):
 if __name__ == '__main__':
     data_path_ori = r'plt/{}'.format(data_path)
     for test,data_path_basename in enumerate(os.listdir(data_path_ori+"C")): #用data_path 里判断文件名后直接用C+E去找
-        # if test ==1:
-        #     break
+        if test ==1:
+            break
         fun = Fun(data_path_ori,data_path_basename, result_path)
         fun.execute()
