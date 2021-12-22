@@ -23,7 +23,7 @@ class Track(object):
         self.dis_ob = {'1': [], '2': [], '3': []}
         self.rest_time_frame = 0
         self.rest_time_flag = 0
-        self.close_box_time = []
+        self.close_box_time = 0
         self.dis = []
         self.v_frame = []
 
@@ -47,19 +47,14 @@ class Fun(object):
         self.small_thres = [0] * 4
         self.name_list = ["lianyu", "heiyu", "liyu", "caoyu"]
         self.fish = locals()
-
         for _name in self.name_list:  # 外部类实例化
             self.fish[_name] = Track()
-
         ###阈值设置
         self.rest_thres = 3
-
         ##创建画布
         self.x_c = [0, 2, 4, 6]
         self.x_e = [0.5, 2.5, 4.5, 6.5]
         self.label = ["silver carp", "hybrid snakehead", "carp", "grass carp", ]
-
-        # plt.xticks([1,2,3,4],["silver carp","grass carp","carp","b"])
 
     def tlwh2xy(self):  # list->matrix
         ret = np.array(self.tlwh.copy())
@@ -81,7 +76,7 @@ class Fun(object):
             self.plot_close_box_time(self.class_name)
             self.plot_each_dis(self.class_name)
             self.plot_fulldis(self.class_name)
-            # 初始化
+            # 重新初始化统计
             for _name in self.name_list:  # 外部类实例化
                 self.fish[_name] = Track()
 
@@ -91,17 +86,21 @@ class Fun(object):
                 exec( "self.plt_each_dis%s = plt.figure(num='dis{}'.format(_name))" %num)
                 plt.ylabel("close_dis/px")
                 plt.xlabel("Name")
-                plt.xticks(self.x_e + [0.25] * 4, self.label)
+                label = self.label.copy()
+                del label[num]
+                print(label)
+                plt.xticks([2.25, 4.25, 6.25], label)
                 for x_label in range(1, 4):
-                    plt.bar(self.x_c[x_label], np.mean(self.fish[_name].dis_ob[str(x_label)]) * 25, width=0.5,
+                    plt.bar(self.x_c[x_label], np.sum(self.fish[_name].dis_ob[str(x_label)]) , width=0.5,
                             color='r')
-                # plt.show()
+                    # plt.show()
+
             elif class_name == "E":
                 plt.figure(num="dis{}".format(_name))
                 for x_label in range(1, 4):
-                    plt.bar(self.x_e[x_label], np.mean(self.fish[_name].dis_ob[str(x_label)]) * 25, width=0.5,
+                    plt.bar(self.x_e[x_label], np.sum(self.fish[_name].dis_ob[str(x_label)]) , width=0.5,
                             color='b')
-                # plt.show()
+                    # plt.show()
                 exec("self.plt_each_dis%s.savefig('{}/dis_{}.jpg'.format(self.result_path, data_path + self.data_base_name + _name))"%num)
 
     def plot_fulldis(self, class_name):
@@ -111,13 +110,13 @@ class Fun(object):
             plt.xlabel("Name")
             plt.xticks(self.x_e + [0.25] * 4, self.label)
             for x_label in range(0, 4):
-                plt.bar(self.x_c[x_label], np.sum(self.fish[self.name_list[math.floor(x_label)]].dis) * 25, width=0.5,
+                plt.bar(self.x_c[x_label], np.sum(self.fish[self.name_list[math.floor(x_label)]].dis) / 25, width=0.5,
                         color='r')
             # plt.show()
         elif class_name == "E":
             plt.figure(num="fulldis")
             for x_label in range(0, 4):
-                plt.bar(self.x_e[x_label], np.sum(self.fish[self.name_list[math.floor(x_label)]].dis) * 25,
+                plt.bar(self.x_e[x_label], np.sum(self.fish[self.name_list[math.floor(x_label)]].dis) / 25,
                         width=0.5, color='b')
             # plt.show()
             self.plt_fulldis.savefig("{}/fulldis_{}.jpg".format(self.result_path, data_path + self.data_base_name))
@@ -129,13 +128,13 @@ class Fun(object):
             plt.xlabel("Name")
             plt.xticks(self.x_e + [0.25] * 4, self.label)
             for x_label in range(0, 4):
-                plt.bar(self.x_c[x_label], np.mean(self.fish[self.name_list[math.floor(x_label)]].close_box_time) * 25,
+                plt.bar(self.x_c[x_label], self.fish[self.name_list[math.floor(x_label)]].close_box_time/ 25,
                         width=0.5, color='r')
             # plt.show()
         elif class_name == "E":
             plt.figure(num="close_box_time")
             for x_label in range(0, 4):
-                plt.bar(self.x_e[x_label], np.mean(self.fish[self.name_list[math.floor(x_label)]].close_box_time) * 25,
+                plt.bar(self.x_e[x_label], self.fish[self.name_list[math.floor(x_label)]].close_box_time / 25,
                         width=0.5, color='b')
             # plt.show()
             self.plt_close_box_time.savefig(
@@ -160,13 +159,13 @@ class Fun(object):
             plt.xlabel("Name")
             plt.xticks(self.x_e + [0.25] * 4, self.label)
             for x_label in range(0, 4):
-                plt.bar(self.x_c[x_label], np.mean(self.fish[self.name_list[math.floor(x_label)]].v_frame) * 25,
+                plt.bar(self.x_c[x_label], np.mean(self.fish[self.name_list[math.floor(x_label)]].v_frame) / 25,
                         width=0.5, color='r')
             # plt.show()
         elif class_name == "E":
             plt.figure(num="v")
             for x_label in range(0, 4):
-                plt.bar(self.x_e[x_label], np.mean(self.fish[self.name_list[math.floor(x_label)]].v_frame) * 25,
+                plt.bar(self.x_e[x_label], np.mean(self.fish[self.name_list[math.floor(x_label)]].v_frame) / 25,
                         width=0.5, color='b')
             # plt.show()
             self.plt_v.savefig("{}/V_{}.jpg".format(self.result_path, data_path + self.data_base_name))
@@ -178,16 +177,14 @@ class Fun(object):
             plt.xlabel("Name")
             plt.xticks(self.x_e + [0.25] * 4, self.label)
             for x_label in range(0, 4):
-                plt.bar(self.x_c[x_label], np.mean(self.fish[self.name_list[math.floor(x_label)]].rest_time_frame) * 25,
-                        width=0.5,
-                        color='r')
+                plt.bar(self.x_c[x_label], np.sum(self.fish[self.name_list[math.floor(x_label)]].rest_time_frame) / 25,
+                        width=0.5,color='r')
             # plt.show()
         elif class_name == "E":
             plt.figure(num="rest_time")
             for x_label in range(0, 4):
-                plt.bar(self.x_e[x_label], np.mean(self.fish[self.name_list[math.floor(x_label)]].rest_time_frame) * 25,
-                        width=0.5,
-                        color='b')
+                plt.bar(self.x_e[x_label], np.sum(self.fish[self.name_list[math.floor(x_label)]].rest_time_frame) / 25,
+                        width=0.5,color='b')
             # plt.show()
             self.plt_rest_time.savefig("{}/Rest_{}.jpg".format(self.result_path, data_path + self.data_base_name))
 
@@ -211,6 +208,7 @@ class Fun(object):
         self.x = self.tlwh[id][0] + self.tlwh[id][2] / 2
         self.y = self.tlwh[id][1] + self.tlwh[id][3] / 2
         self.small_thres[id] = math.sqrt((self.tlwh[id][2] + self.tlwh[id][3]) / 100)
+        # print("small_thres",self.small_thres)
 
     def execute_datas(self):
         flag = 0
@@ -230,15 +228,14 @@ class Fun(object):
                 if flag == 0:
                     pcxcy = cxcy
                     flag = 1
-                self.each_close_dis(cxcy)
+                self.each_close_dis(cxcy)#个体间距
                 self.count_frame += 1
                 v_dis_mat = cxcy - pcxcy  # v_dis_mat：这帧减上一帧中心点
-                self.each_v(v_dis_mat)
-                self.each_rest_time(v_dis_mat)
-                self.ecah_fulldis(v_dis_mat)
+                self.each_v(v_dis_mat)#平均速度
+                self.each_rest_time(v_dis_mat)#静息时间
+                self.ecah_fulldis(v_dis_mat)#游泳距离
                 pcxcy = cxcy
-        self.each_close_box_time()
-
+        self.each_close_box_time()#靠墙时间
         # print('d')
         # self.each_avg_v()
 
@@ -290,7 +287,7 @@ class Fun(object):
         for col in range(0, 4):  # 循环计算各个点与其他点的距离（包括自身）
             for row in range(0, 4):
                 each_dis_mat[col, row] = ((cxcy[col, 0] - cxcy[row, 0]) ** 2 +
-                                          (cxcy[col, 0] - cxcy[row, 0]) ** 2) * 0.5
+                                          (cxcy[col, 0] - cxcy[row, 0]) ** 2) ** 0.5
         for name_num, name in enumerate(self.name_list):
             string = [0, 1, 2, 3]
             string.remove(name_num)  # 除掉自身的数据保存在其他dis_obx的属性里
@@ -300,7 +297,6 @@ class Fun(object):
                 # idea 2
                 # eval("self."+name + ".dis_ob[str(num+1)].append(each_dis_mat[name_num,string_col])")
                 # print("self."+name + ".dis_ob[str(num+1)].append(each_dis_mat[name_num,string_col])")
-
         # print('d')
 
     def each_close_box_time(self):
@@ -310,7 +306,7 @@ class Fun(object):
         for _name in self.name_list:
             each_fish_mat = self.fish[_name].hotmap_mat.copy()
             each_fish_mat[limy1:limy2, limx1:limx2] = 0
-            self.fish[_name].close_box_time.append(np.sum(each_fish_mat))
+            self.fish[_name].close_box_time=np.sum(each_fish_mat)
 
 
 if __name__ == '__main__':
@@ -323,4 +319,5 @@ if __name__ == '__main__':
             if not os.path.exists(result_path):
                 os.makedirs(result_path)
             fun = Fun(data_path_ori, data_path_basename, result_path)
-            fun.execute()
+            fun.execute()#处理一小时的C+E
+            plt.close('all')#关闭所有画布
