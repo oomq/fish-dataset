@@ -40,7 +40,6 @@ class Fun(object):
         self.data_path_ori = data_path_ori
         self.data_base_name = data_base_name
         self.result_path = result_path
-        self.xlsoutput = xls.Workbook("track-test.xlsx")
         ###定义
         self.x = 0
         self.y = 0
@@ -65,15 +64,16 @@ class Fun(object):
 
     def execute(self):  # 处理一小时的txt
         for self.class_name in ["C", "E"]:
-            self.worksheet = self.xlsoutput.add_worksheet('{}'.format(self.class_name + "{}".format(self.data_base_name)))
+            self.worksheet = xlsoutput.add_worksheet('{}'.format(self.class_name + "{}".format(self.data_base_name)))
             txt_folder_path = self.data_path_ori + self.class_name + "/{}".format(self.data_base_name)
             for num, file in enumerate(os.listdir(txt_folder_path)):
                 self.data = np.loadtxt(txt_folder_path + "/{}".format(file), delimiter=',')
                 print(num, file)
                 self.execute_datas()
             for x_label in range(0,4):
-                self.worksheet.write_column('A{}'.format(x_label),
-                        np.mean(self.fish[self.name_list[math.floor(x_label)]].v_frame) / 25)
+                x = np.mean(self.fish[self.name_list[math.floor(x_label)]].v_frame)/25
+                self.worksheet.write_number('A{}'.format(x_label),
+                                            np.mean(self.fish[self.name_list[x_label]].v_frame) / 25)
 
 
 
@@ -88,7 +88,7 @@ class Fun(object):
             for _name in self.name_list:  # 外部类实例化
                 self.fish[_name] = Track()
 
-        self.xlsoutput.close()
+
 
     def plot_each_dis(self, class_name):
         for num, _name in enumerate(self.name_list):
@@ -321,6 +321,7 @@ class Fun(object):
 
 
 if __name__ == '__main__':
+    xlsoutput = xls.Workbook("track-test.xlsx")
     for data_path in ["1020", "1023", "1026"]:
         data_path_ori = r'plt/{}'.format(data_path)
         for test, data_path_basename in enumerate(os.listdir(data_path_ori + "C")):  # 用data_path 里判断文件名后直接用C+E去找
@@ -332,7 +333,7 @@ if __name__ == '__main__':
             fun = Fun(data_path_ori, data_path_basename, result_path)
             fun.execute()  # 处理一小时的C+E
             plt.close('all')  # 关闭所有画布
-
+    xlsoutput.close()
 
     # for idx in range(0,4):
     #     for _class_name in class_name:
