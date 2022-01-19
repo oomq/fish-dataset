@@ -56,7 +56,7 @@ def avg2excle():
 
     xlsouput.close()
 
-if __name__ == '__main__':
+def polt_ce():
     x_c = [0, 2, 4, 6]
     x_e = [0.5, 2.5, 4.5, 6.5]
     x_name = [0.25,2.25,4.25,6.25]
@@ -88,3 +88,6 @@ if __name__ == '__main__':
                 plt_heatmap.savefig("pic/heatmap{}_{}C.jpg".format(day_list[_index],name_list[math.floor(_name)]))
             else:
                 plt_heatmap.savefig("pic/heatmap{}_{}E.jpg".format(day_list[_index], name_list[math.floor(_name-4)]))
+
+if __name__ == '__main__':
+    avg2excle()
