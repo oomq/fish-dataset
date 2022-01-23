@@ -3,6 +3,7 @@ import os
 import bisect
 import math
 import matplotlib.pyplot as plt
+import xlsxwriter as xls
 import xlwt
 
 # from pyecharts.charts import HeatMap
@@ -67,10 +68,13 @@ class Fun(object):
 
         for self.class_name in ["C", "E"]:
             txt_folder_path = self.data_path_ori + self.class_name + "/{}".format(self.data_base_name)
+            print(txt_folder_path)
             for num, file in enumerate(os.listdir(txt_folder_path)):
                 self.data = np.loadtxt(txt_folder_path + "/{}".format(file), delimiter=',')
-                print(num, file)
+                # print(num, file)
                 self.execute_datas()
+
+
 
             # 画图
             self.plot_v(self.class_name)
@@ -91,7 +95,7 @@ class Fun(object):
                 plt.xlabel("Name")
                 label = self.label.copy()
                 del label[num]
-                print(label)
+                # print(label)
                 plt.xticks([2.25, 4.25, 6.25], label)
                 for x_label in range(1, 4):
                     plt.bar(self.x_c[x_label], np.sum(self.fish[_name].dis_ob[str(x_label)]) , width=0.5,
@@ -161,16 +165,24 @@ class Fun(object):
             plt.ylabel("V/(px/s)")
             plt.xlabel("Name")
             plt.xticks(self.x_name, self.label)
-            # plt.ylim(0,9)
+            self.worksheet = xlsoutput.add_worksheet('{}'.format(self.class_name + "{}".format(self.data_base_name)))
+
+            # plt.ylim(0,330)
+            error_params1 = dict(elinewidth=3, ecolor='black', capsize=4)  # 设置误差标记参数
             for x_label in range(0, 4):
-                plt.bar(self.x_c[x_label], np.mean(self.fish[self.name_list[math.floor(x_label)]].v_frame) ,###/25
-                        width=0.5, color='r')
+                plt.bar(self.x_c[x_label], np.mean(self.fish[self.name_list[math.floor(x_label)]].v_frame) ,  yerr=np.std(self.fish[self.name_list[math.floor(x_label)]].v_frame), ###/25
+                        error_kw=error_params1, width=0.5, color='r')
+                self.worksheet.write_row("A{}".format(x_label+1),self.fish[self.name_list[math.floor(x_label)]].v_frame)
             # plt.show()
         elif class_name == "E":
+            self.worksheet = xlsoutput.add_worksheet('{}'.format(self.class_name + "{}".format(self.data_base_name)))
             plt.figure(num="v")
+            error_params1 = dict(elinewidth=3, ecolor='black', capsize=4)
             for x_label in range(0, 4):
-                plt.bar(self.x_e[x_label], np.mean(self.fish[self.name_list[math.floor(x_label)]].v_frame),###/25
-                        width=0.5, color='b')
+                plt.bar(self.x_e[x_label], np.mean(self.fish[self.name_list[math.floor(x_label)]].v_frame),yerr=np.std(self.fish[self.name_list[math.floor(x_label)]].v_frame),###/25
+                        error_kw=error_params1, width=0.5, color='b')
+                self.worksheet.write_row("A{}".format(x_label + 1),
+                                         self.fish[self.name_list[math.floor(x_label)]].v_frame)
             # plt.show()
             self.plt_v.savefig("{}/V_{}.jpg".format(self.result_path, data_path + self.data_base_name))
 
@@ -230,7 +242,7 @@ class Fun(object):
             if frame%25!=0:
                 continue
             if frame != int(self.data[i - 1, 0]):
-                print(frame)
+                # print(frame)
                 cxcy = self.tlwh2xy()
                 if flag == 0:
                     pcxcy = cxcy
@@ -273,12 +285,12 @@ class Fun(object):
         # self.caoyu.v_frame.append((v_dis_mat[3,0]**2 + v_dis_mat[3,1]**2)**0.5)
         for name_num, name in enumerate(self.name_list):
             v = (v_dis_mat[name_num, 0] ** 2 + v_dis_mat[name_num, 1] ** 2) ** 0.5
-            print(v,self.small_thres[name_num])
+            # print(v,self.small_thres[name_num])
             # if v >= self.small_thres[name_num]:
-            if v >= 10:
+            if v >= 50:
                 self.fish[name].v_frame.append(v)
-            else:
-                self.fish[name].v_frame.append(0)
+            # else:
+            #     self.fish[name].v_frame.append(0)
 
     def ecah_fulldis(self, v_dis_mat):
         for name_num, name in enumerate(self.name_list):
@@ -323,6 +335,9 @@ class Fun(object):
 
 
 if __name__ == '__main__':
+    if os.path.exists("s.xls"):
+        os.remove("s.xls")
+    xlsoutput = xls.Workbook("s.xls")
     for data_path in ["1020","1023","1026"]:
         data_path_ori = r'plt/{}'.format(data_path)
         for test, data_path_basename in enumerate(os.listdir(data_path_ori + "C")):  # 用data_path 里判断文件名后直接用C+E去找
@@ -334,6 +349,8 @@ if __name__ == '__main__':
             fun = Fun(data_path_ori, data_path_basename, result_path)
             fun.execute()#处理一小时的C+E
             plt.close('all')#关闭所有画布
+
+    xlsoutput.close()
 
     # for idx in range(0,4):
     #     for _class_name in class_name:
