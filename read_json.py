@@ -4,18 +4,22 @@ import json
 
 photo_flag = 1080
 class ReadAnno:
-    def __init__(self, json_path, process_mode="rectangle"):
+    def __init__(self, json_path, process_mode="keypoints"):
         self.json_data = json.load(open(json_path))
         self.filename = self.json_data['imagePath']
         self.width = self.json_data['imageWidth']
         self.height = self.json_data['imageHeight']
         self.coordis = []
+        self.keypoints = []
+        self.classes = []
 
-        assert process_mode in ["rectangle", "polygon"]
+        assert process_mode in ["rectangle", "polygon", "keypoints"]
         if process_mode == "rectangle":
             self.process_polygon_shapes()
         elif process_mode == "polygon":
             self.process_polygon_shapes()
+        elif process_mode == "keypoints":
+            self.process_keypoints()
 
     def process_rectangle_shapes(self):
         for single_shape in self.json_data['shapes']:
@@ -43,6 +47,25 @@ class ReadAnno:
 
             self.coordis.append([xmin, ymin, xmax, ymax, bbox_class])
 
+    def process_keypoints(self):
+        temp_keypoint =[]
+        for single_shape in enumerate(self.json_data['shapes']):
+            for _num,_keypoint in enumerate(single_shape[1]['points']):
+                print(_num)
+                if _num == 0:
+                    self.keypoints.append(_keypoint)
+                    self.classes.append(1)
+                if _num == 3:
+                    temp_keypoint = _keypoint
+
+                if _num == 5:
+                    print(5)
+                    self.keypoints.append(_keypoint)
+                    self.classes.append(2)
+                    self.keypoints.append(temp_keypoint)
+                    self.classes.append(3)
+                    temp_keypoint =[]
+
     def get_width_height(self):
         return self.width, self.height
 
@@ -51,3 +74,6 @@ class ReadAnno:
 
     def get_coordis(self):
         return self.coordis
+
+    def get_keypoints(self):
+        return self.classes,self.keypoints
