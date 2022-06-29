@@ -7,7 +7,7 @@ import os
 import cv2
 import itertools
 import tqdm
-from math import *
+import math
 
 
 def float2int(x):
@@ -81,48 +81,60 @@ def imagerotate(image):
     # new_height = int((height *np.abs(M[0, 0])) + (width * np.abs(M[0, 1])))
     new_height = int(width * fabs(sin(radians(angel))) + height * fabs(cos(radians(angel))))
     new_width = int(height * fabs(sin(radians(angel))) + width * fabs(cos(radians(angel))))
-
-
     # M[0, 2] += (new_width - width) / 2
     # M[1, 2] += (new_height - height) / 2
-
-
     image_rotation = cv2.warpAffine(src=image, M=M, dsize=(new_height, new_width), borderValue=(255, 255, 255))
     return image_rotation
 
 
+cross = cv2.getStructuringElement(cv2.MORPH_CROSS,(3, 3))
+diamond = cv2.getStructuringElement(cv2.MORPH_RECT,(3 , 3))
+
+def select_max_region(mask):
+    nums, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    background = 0
+    for row in range(stats.shape[0]):
+        if stats[row, :][0] == 0 and stats[row, :][1] == 0:
+            background = row
+    stats_no_bg = np.delete(stats, background, axis=0)
+    max_idx = stats_no_bg[:, 4].argmax()
+    max_region = np.where(labels==max_idx+1, 255, 0)
+
+    return max_region.astype(np.uint8)
 
 
-
-def copypaste(img1,list1,folder,idx_frame,fishnum):
-
+def copypaste(img1,data,folder,idx_frame,fishnum,i):
     img = img1
-    # img2 = img1
-    txt_data = list1
+    txt_data = data
     # num = random.randint(1,5)
     #鱼A作为mask 鱼B为背景
-    fish_A = data[1]
+
+    fish_A = data[num]
     fish_B = txt_data[0]
     # mask_orignal = img[data[0,3]-5:data[0,3]+data[0,5]+5, data[0,2]-5:data[0,2]+data[0,4]+5]
     mask_orignal = img[fish_A[1]:fish_A[1]+fish_A[3], fish_A[0]:fish_A[0]+fish_A[2]]
     # mask_orignal = imagerotate(mask_orignal)
     angel = random.randint(-180, 180)
-
-
     mask_orignal = imutils.rotate_bound(mask_orignal, angel)
-
-    if not os.path.exists('cpdataset/jiyu12'.format(folder)):
-        os.mkdir('cpdataset/jiyu12'.format(folder))
-
-    cv2.imwrite('cpdataset/jiyu12/{}/{}_{}.jpg'.format(folder,idx_frame, fishnum), mask_orignal)
+    ###test-vis
+    # if not os.path.exists('cpdataset/jiyu12/{}'.format(folder)):
+    #     os.mkdir('cpdataset/jiyu12/{}'.format(folder))
+    # cv2.imwrite('cpdataset/jiyu12/{}/{}_{}.jpg'.format(folder,idx_frame, fishnum), mask_orignal)
     rows, cols, channels = mask_orignal.shape
     mask_gray = cv2.cvtColor(mask_orignal, cv2.COLOR_BGR2GRAY)
     # cv2.namedWindow('img', cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
     # cv2.imshow('img', mask_orignal)
-    _, mask = cv2.threshold(mask_gray,150,255,cv2.THRESH_BINARY)
+    # mask_gray = cv2.blur(mask_gray, (3, 3))
+    _, mask = cv2.threshold(mask_gray,130,255,cv2.THRESH_BINARY)
+    # result1 = cv2.dilate(mask, cross)
+    # result2 = cv2.erode(result1, diamond)
+    # result3 = select_max_region(result2)
+
+
     # plt.imshow(mask, 'gray')
     kernel = np.ones((5, 5), np.uint8)
     mask_dilate = cv2.dilate(mask, kernel, iterations=1)
+    # mask_dilate = result3
     # plt.figure()
     # plt.imshow(mask_dilate, 'gray')
     rows1, cols1= mask_gray.shape
@@ -132,8 +144,8 @@ def copypaste(img1,list1,folder,idx_frame,fishnum):
     max_y = max(rows1,fish_B[3])
     max_x = max(cols1,fish_B[2])
 
-    img_background = img[fish_B[1]:fish_B[1]+max_y,fish_B[0]:fish_B[0]+max_x]
-
+    # img_background = img[fish_B[1]:fish_B[1]+max_y,fish_B[0]:fish_B[0]+max_x]
+    img_background = img
     rows_bg, cols_bg, channels_bg = img_background.shape
     if rows_bg >= rows and cols_bg >= cols:
         center_x = cols_bg/2
@@ -141,14 +153,20 @@ def copypaste(img1,list1,folder,idx_frame,fishnum):
         rec = img_background[int(center_y - rows / 2):int(center_y + rows / 2),
               int(center_x - cols / 2):int(center_x + cols / 2)]
         #在中心区域画图
-        roi = img_background[int(center_y-rows/2):int(center_y+rows/2), int(center_x-cols/2):int(center_x+cols/2)]
+        # roi = img_background[int(center_y-rows/2):int(center_y+rows/2), int(center_x-cols/2):int(center_x+cols/2)]
+        randx = random.randint(math.ceil(cols / 2),cols_bg-200)
+        randy = random.randint(math.ceil(rows / 2),rows_bg-200)
+        roi = img_background[int(randy - rows / 2):int(randy + rows / 2),
+              int(randx- cols / 2):int(randx + cols / 2)]
         #mask背景
         img1_bg = cv2.bitwise_and(roi,roi,mask= mask_dilate)
         #mask前景
         img2_fg = cv2.bitwise_and(mask_orignal,mask_orignal,mask=mask_inv)
 
         dst = cv2.add(img1_bg,img2_fg)
-        img_background[int(center_y-rows/2):int(center_y+rows/2), int(center_x-cols/2):int(center_x+cols/2)] = dst
+        # img_background[int(center_y-rows/2):int(center_y+rows/2), int(center_x-cols/2):int(center_x+cols/2)] = dst
+        img_background[int(randy - rows / 2):int(randy + rows / 2),
+        int(randx - cols / 2):int(randx + cols / 2)] = dst
         # fish_img = img[fish_B[1]:fish_B[1]+fish_B[3],fish_B[0]:fish_B[0]+fish_B[2]]
         fish_img = img
         # cv2.imshow('fish', fish_img)
@@ -156,7 +174,15 @@ def copypaste(img1,list1,folder,idx_frame,fishnum):
         cv2.destroyAllWindows()
         if not os.path.exists('cpdataset/jiyu/{}'.format(folder)):
             os.mkdir('cpdataset/jiyu/{}'.format(folder))
-        cv2.imwrite('cpdataset/jiyu/{}/{}_{}.jpg'.format(folder,idx_frame, fishnum), fish_img)
+        print(image)
+        if i == 3:
+            # print(image.split('/')[-1])
+            cv2.imwrite('cpdataset/jiyu/{}'.format(image.split('/')[-1]), fish_img)
+            #rows_bg, cols_bg
+        line = "0 {:.6f} {:.6f} {:.6f} {:.6f}\n".format(randy/rows_bg,randx/cols_bg,rows/rows_bg,cols/cols_bg)
+        with open(txt,"a") as f:
+            f.write(line)
+
         # img_background[int(center_y-rows/2):int(center_y+rows/2), int(center_x-cols/2):int(center_x+cols/2)] = rec
         # cv2.imshow('1',img_background)
     # cv2.imshow('img',img1)
@@ -173,22 +199,30 @@ def yolo2xyxy(data,height, width): #xywh2tlbr
     data[:,2] = data[:,2] *height - data[:,4]/2
     return data[:,1:].astype(np.uint16)
 
+
+
 for folder in os.listdir(data_path):
 
     label_path = (labels_path + folder+ "\\*txt")
     txt_path = glob.glob(label_path)
     images_path = glob.glob(label_path.replace("labels","images").replace("txt","jpg"))
+    # txt_path.remove("yolo/data/labels/{}\\clasess.txt".format(folder))
     for idx_frame,txt in enumerate(txt_path):
         data = np.loadtxt("{}".format(txt), delimiter=' ',dtype=float)
         image = txt.replace("labels", "images").replace("txt", "jpg")
+
         img = cv2.imread(image)
         height, width, depth = img.shape
         data = yolo2xyxy(data,height, width)
-        randnum = range(0, 5)  # 范围在0到100之间，需要用到range()函数。
-        nums = random.sample(randnum, 2)
-        for num, copypaste_data in enumerate(itertools.combinations(data, 2)):
-            if num  in nums:
-                copypaste(img, copypaste_data, folder, idx_frame,num)
-                cv2.imshow("1",img)
-                cv2.waitKey()
+        randnum = range(0, data.shape[0])  # 范围在0到100之间，需要用到range()函数。
+        nums = random.sample(randnum, 3)
+        i=0
+        # for num, copypaste_data in enumerate(itertools.combinations(data, 2)):
+        for num in nums:
+            i += 1
+            copypaste(img, data, folder, idx_frame,num,i)
+
+
+                # cv2.imshow("1",img)
+                # cv2.waitKey()
                 # img = cv2.imread(image)
