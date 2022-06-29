@@ -87,8 +87,7 @@ def imagerotate(image):
     return image_rotation
 
 
-cross = cv2.getStructuringElement(cv2.MORPH_CROSS,(3, 3))
-diamond = cv2.getStructuringElement(cv2.MORPH_RECT,(3 , 3))
+
 
 def select_max_region(mask):
     nums, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
@@ -102,6 +101,8 @@ def select_max_region(mask):
 
     return max_region.astype(np.uint8)
 
+cross = cv2.getStructuringElement(cv2.MORPH_CROSS,(3, 3))
+diamond = cv2.getStructuringElement(cv2.MORPH_RECT,(3 , 3))
 
 def copypaste(img1,data,folder,idx_frame,fishnum,i):
     img = img1
@@ -124,16 +125,16 @@ def copypaste(img1,data,folder,idx_frame,fishnum,i):
     mask_gray = cv2.cvtColor(mask_orignal, cv2.COLOR_BGR2GRAY)
     # cv2.namedWindow('img', cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
     # cv2.imshow('img', mask_orignal)
-    # mask_gray = cv2.blur(mask_gray, (3, 3))
+    mask_gray = cv2.blur(mask_gray, (3, 3))
     _, mask = cv2.threshold(mask_gray,130,255,cv2.THRESH_BINARY)
-    # result1 = cv2.dilate(mask, cross)
-    # result2 = cv2.erode(result1, diamond)
-    # result3 = select_max_region(result2)
+    result1 = cv2.erode(mask, diamond)
+    result2 = cv2.dilate(result1, cross)
+    result3 = select_max_region(result2)
 
 
     # plt.imshow(mask, 'gray')
     kernel = np.ones((5, 5), np.uint8)
-    mask_dilate = cv2.dilate(mask, kernel, iterations=1)
+    mask_dilate = cv2.erode(result3, kernel, iterations=1)
     # mask_dilate = result3
     # plt.figure()
     # plt.imshow(mask_dilate, 'gray')
@@ -173,17 +174,24 @@ def copypaste(img1,data,folder,idx_frame,fishnum,i):
         # cv2.waitKey()
         cv2.destroyAllWindows()
         if not os.path.exists('cpdataset/jiyu/{}'.format(folder)):
-            os.mkdir('cpdataset/jiyu/{}'.format(folder))
+            os.makedirs('cpdataset/jiyu/{}'.format(folder))
         print(image)
         if i == 3:
             # print(image.split('/')[-1])
             cv2.imwrite('cpdataset/jiyu/{}'.format(image.split('/')[-1]), fish_img)
-            #rows_bg, cols_bg
-        line = "0 {:.6f} {:.6f} {:.6f} {:.6f}\n".format(randy/rows_bg,randx/cols_bg,rows/rows_bg,cols/cols_bg)
-        with open(txt,"a") as f:
+            with open('cpdataset/jiyu/{}'.format(image.split('/')[-1].replace("jpg", "txt")), "a+") as f:
+                fo = open(txt,"r")
+                datafo = fo.read()
+                f.writelines(datafo)
+
+        line = "0 {:.6f} {:.6f} {:.6f} {:.6f}\n".format(randx/cols_bg-cols/cols_bg ,randy/rows_bg-rows/rows_bg,
+                        cols/cols_bg, rows/rows_bg)
+        with open('cpdataset/jiyu/{}'.format(image.split('/')[-1].replace("jpg","txt")),"a+") as f:
             f.write(line)
 
-        # img_background[int(center_y-rows/2):int(center_y+rows/2), int(center_x-cols/2):int(center_x+cols/2)] = rec
+
+        # img_background[int(center_y-rows/2):int(center_y+rows/2)
+        # , int(center_x-cols/2):int(center_x+cols/2)] = rec
         # cv2.imshow('1',img_background)
     # cv2.imshow('img',img1)
     # cv2.waitKey()
@@ -208,12 +216,12 @@ for folder in os.listdir(data_path):
     images_path = glob.glob(label_path.replace("labels","images").replace("txt","jpg"))
     # txt_path.remove("yolo/data/labels/{}\\clasess.txt".format(folder))
     for idx_frame,txt in enumerate(txt_path):
-        data = np.loadtxt("{}".format(txt), delimiter=' ',dtype=float)
+        data1 = np.loadtxt("{}".format(txt), delimiter=' ',dtype=float)
         image = txt.replace("labels", "images").replace("txt", "jpg")
 
         img = cv2.imread(image)
         height, width, depth = img.shape
-        data = yolo2xyxy(data,height, width)
+        data = yolo2xyxy(data1,height, width)
         randnum = range(0, data.shape[0])  # 范围在0到100之间，需要用到range()函数。
         nums = random.sample(randnum, 3)
         i=0
