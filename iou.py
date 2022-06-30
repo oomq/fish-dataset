@@ -91,6 +91,7 @@ def imagerotate(image):
 
 def select_max_region(mask):
     nums, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    nums, labels = cv2.connectedComponents(mask, connectivity=4)
     background = 0
     for row in range(stats.shape[0]):
         if stats[row, :][0] == 0 and stats[row, :][1] == 0:
@@ -127,14 +128,14 @@ def copypaste(img1,data,folder,idx_frame,fishnum,i):
     # cv2.imshow('img', mask_orignal)
     mask_gray = cv2.blur(mask_gray, (3, 3))
     _, mask = cv2.threshold(mask_gray,130,255,cv2.THRESH_BINARY)
-    result1 = cv2.erode(mask, diamond)
+    result1 = select_max_region(mask)
     result2 = cv2.dilate(result1, cross)
-    result3 = select_max_region(result2)
+    # result3 = cv2.erode(result3, diamond)
 
 
     # plt.imshow(mask, 'gray')
     kernel = np.ones((5, 5), np.uint8)
-    mask_dilate = cv2.erode(result3, kernel, iterations=1)
+    mask_dilate = cv2.erode(result2, kernel, iterations=1)
     # mask_dilate = result3
     # plt.figure()
     # plt.imshow(mask_dilate, 'gray')
@@ -176,6 +177,14 @@ def copypaste(img1,data,folder,idx_frame,fishnum,i):
         if not os.path.exists('cpdataset/jiyu/{}'.format(folder)):
             os.makedirs('cpdataset/jiyu/{}'.format(folder))
         print(image)
+        line = "0 {:.6f} {:.6f} {:.6f} {:.6f}\n".format(randx/cols_bg ,randy/rows_bg,
+                        cols/cols_bg, rows/rows_bg)
+        if i == 1:
+            with open('cpdataset/jiyu/{}'.format(image.split('/')[-1].replace("jpg", "txt")), "w+") as f:
+                f.write(line)
+        else:
+            with open('cpdataset/jiyu/{}'.format(image.split('/')[-1].replace("jpg", "txt")), "a+") as f:
+                f.write(line)
         if i == 3:
             # print(image.split('/')[-1])
             cv2.imwrite('cpdataset/jiyu/{}'.format(image.split('/')[-1]), fish_img)
