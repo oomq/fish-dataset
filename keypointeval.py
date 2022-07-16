@@ -92,7 +92,7 @@ class Fun(object):
                                       [0, 0, 0, 0, 0, 0],
                                       [0, 0, 0, 0, 0, 0]])
 
-        self.keypoint_angle = np.array([0,0]*5)
+        self.keypoint_angle = np.array([0,0]*5)#记录角度-摆尾标志位
 
         self.small_thres = [0]*5
         self.count_frame = 0
@@ -153,11 +153,9 @@ class Fun(object):
         id = int(self.data[i, 1]) - 1
         self.px = self.x
         self.py =self.y
-        self.x = self.data[id,12]
-        self.y = self.data[id,13]
-
-
-
+        self.x = self.data[i,12]
+        self.y = self.data[i,13]
+        self.keypoint_mat[id] = self.data[i,10:17]
 
 
     def execute_datas(self):
@@ -170,7 +168,7 @@ class Fun(object):
 
             id = int(self.data[i, 1]) - 1
             frame = int(self.data[i, 0])
-            if frame != int(self.data[i - 1, 0]):
+            if frame != int(self.data[i - 1, 0]):#每一帧
                 self.count_frame += 1
         #     self.plot_track(id)
         #     ax = plt.gca()  # 获取到当前坐标轴信息
@@ -188,7 +186,19 @@ class Fun(object):
             self.five_record(frame, id, i)
 
 
-    def tail_beat(self,frame, id,i ):
+    def angle_2vet(self,pointA, pointB, pointC):
+        pointA = np.array(pointA)
+        pointB = np.array(pointB)
+        pointC = np.array(pointC)
+        dy, dx = pointB - pointA
+        angel_head = math.atan2(dy, dx)
+        dy, dx = pointB - pointC
+        angel_tail = math.atan2(dy, dx)
+        # if angel_head>math.pi:
+        return math.degrees(math.pi - abs(angel_head) - abs(angel_tail))
+
+    def tail_beat(self,frame,id,i):
+        self.keypoint_angle[]
 
     def second_acceleration(self):
         for num in range(0,len(self.second_v)-1):
