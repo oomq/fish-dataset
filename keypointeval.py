@@ -4,7 +4,7 @@ import xlsxwriter as xls
 import math
 import matplotlib.pyplot as plt
 
-path_input = "test"  # 源数据
+path_input = "09"  # 源数据
 result_path = 'output'
 file_thres = 80
 big_thres = 70
@@ -92,7 +92,16 @@ class Fun(object):
                                       [0, 0, 0, 0, 0, 0],
                                       [0, 0, 0, 0, 0, 0]])
 
-        self.keypoint_angle = np.array([0,0]*5)#记录角度-摆尾标志位
+        self.keypoint_angle_swing = np.array([[0,0,0],
+                                      [0,0,0],
+                                      [0,0,0],
+                                      [0,0,0],
+                                      [0,0,0]])#记录角度-摆尾标志位
+        self.keypoint_beatandswing = np.array([[0,0],
+                                              [0,0],
+                                              [0,0],
+                                              [0,0],
+                                              [0,0]])
 
         self.small_thres = [0]*5
         self.count_frame = 0
@@ -137,7 +146,6 @@ class Fun(object):
             self.tlwh[id][2] = self.data[i, 4]  # w
             self.tlwh[id][3] = self.data[i, 5]  # h
             return
-
         self.px = self.tlwh[id][0] + self.tlwh[id][2] / 2
         self.py = self.tlwh[id][1] + self.tlwh[id][3] / 2
         self.tlwh[id][0] = self.data[i, 2]  # t
@@ -170,23 +178,28 @@ class Fun(object):
             frame = int(self.data[i, 0])
             if frame != int(self.data[i - 1, 0]):#每一帧
                 self.count_frame += 1
+                self.tail_beat(frame, id, i)
         #     self.plot_track(id)
         #     ax = plt.gca()  # 获取到当前坐标轴信息
         #     ax.xaxis.set_ticks_position('top')  # 将X坐标轴移到上面
         #     ax.invert_yaxis()  # 反转Y坐标轴
         # plt.show()
 
-            self.fishing_var(frame, id, i)
-            self.second_record(frame, id, i)
-            self.swerve(id, i)
-            self.halfhour_record(frame, id, i)
-            self.swerve_faster(id, i)
-            self.twenty_record(frame, id, i)
-            self.ten_record(frame, id, i)
-            self.five_record(frame, id, i)
+
+            # self.fishing_var(frame, id, i)
+            # self.second_record(frame, id, i)
+            # self.swerve(id, i)
+            # self.halfhour_record(frame, id, i)
+            # self.swerve_faster(id, i)
+            # self.twenty_record(frame, id, i)
+            # self.ten_record(frame, id, i)
+            # self.five_record(frame, id, i)
+
+        print(self.keypoint_beatandswing)
 
 
-    def angle_2vet(self,pointA, pointB, pointC):
+    def angle_2vet(self,line):
+        pointA, pointB, pointC = (line[0],line[1]),(line[2],line[3]),(line[4],line[5])
         pointA = np.array(pointA)
         pointB = np.array(pointB)
         pointC = np.array(pointC)
@@ -197,8 +210,42 @@ class Fun(object):
         # if angel_head>math.pi:
         return math.degrees(math.pi - abs(angel_head) - abs(angel_tail))
 
+    def get_distance_point2line(self, line):  ##  计算点到直线的距离
+        """
+        Args:
+            point: [x0, y0]
+            line: [x1, y1, x2, y2]
+        """
+        point = (line[4],line[5])##keypointtail
+        line_point1, line_point2 = np.array(line[0:2]), np.array(line[2:4])
+        vec1 = line_point1 - point
+        vec2 = line_point2 - point
+        m = np.linalg.norm(line_point1 - line_point2)
+        if m == 0:
+            print('error')
+            return 0
+        else:
+            distance = np.abs(np.cross(vec1, vec2)) / m
+        return distance
+
     def tail_beat(self,frame,id,i):
-        self.keypoint_angle[]
+        for idx,line in enumerate(self.keypoint_mat):##更新一帧
+            self.keypoint_angle_swing[idx][0] = self.angle_2vet(line)
+            max = self.get_distance_point2line(line)
+
+            if max > self.keypoint_angle_swing[idx][1]:
+                self.keypoint_angle_swing[idx][1]=max
+
+        for row,_ in enumerate(self.keypoint_angle_swing):##判断一帧
+            if (self.keypoint_angle_swing[row][0]<=1 and self.keypoint_angle_swing[row][0]>=-1) and self.keypoint_angle_swing[row][2] == 1 :
+                self.keypoint_beatandswing[row][0] +=1
+                self.keypoint_beatandswing[row][1] += self.keypoint_angle_swing[row][1]
+                self.keypoint_angle_swing[row][1] = 0
+            if self.keypoint_angle_swing[row][0] >= 5 or self.keypoint_angle_swing[row][0] <= -5 :
+                self.keypoint_angle_swing[row][2] = 1
+            if -1<=self.keypoint_angle_swing[row][0]<=1 :
+                self.keypoint_angle_swing[row][2] = 0
+
 
     def second_acceleration(self):
         for num in range(0,len(self.second_v)-1):
@@ -519,8 +566,8 @@ class Fun(object):
         worksheet.write_column('D2', self.twenty_v)
         worksheet.write_column('E2', self.ten_v)
         worksheet.write_column('F2', self.five_v)
-        worksheet.write_column('G2',self.second_acc)
-        worksheet.write_column('H2',self.fish_var)
+        worksheet.write_column('G2', self.second_acc)
+        worksheet.write_column('H2', self.fish_var)
         worksheet.write_column('I2', self.swerves)
         worksheet.write_column('J2', self.swerves_faster)
         worksheet.write_column('K2', self.swerves_faster)
