@@ -3,6 +3,10 @@ import os
 import xlsxwriter as xls
 import math
 import matplotlib.pyplot as plt
+import time
+import xlrd
+from concurrent.futures import wait, ALL_COMPLETED
+import concurrent.futures
 
 path_input = "09"  # 源数据
 result_path = 'output'
@@ -103,6 +107,9 @@ class Fun(object):
                                               [0,0],
                                               [0,0]])
 
+        self.avg_beat= []
+        self.avg_swing = []
+
         self.small_thres = [0]*5
         self.count_frame = 0
 
@@ -123,15 +130,21 @@ class Fun(object):
 
     def execute(self):
         for num, file in enumerate(os.listdir(self.data_path)):
-            if int(file.replace(".txt", "").replace(self.data_path + "-", "")) > file_thres:
+            if file.endswith(".mp4"):
+                continue
+            if int(file[-7:-4]) > file_thres:
                 # print(num, file)
                 continue
             print(num, file)
             self.data = np.loadtxt(self.data_path + "/{}".format(file), delimiter=',')
             if num == 0:
                 self.vediolen = int(self.data[int(self.data.shape[0]) - 1, 0])
+            start = time.time()
             self.execute_datas()
+            end = time.time()
+            print("inf-speed",end-start)
         self.second_acceleration()
+        print("d")
         self.xls_writer()
         print('writing')
 
@@ -157,13 +170,6 @@ class Fun(object):
         self.small_thres[id] = math.sqrt((self.tlwh[id][2] + self.tlwh[id][3]) / 100)
     '''
 
-    def renewtlwh(self, i):
-        id = int(self.data[i, 1]) - 1
-        self.px = self.x
-        self.py =self.y
-        self.x = self.data[i,12]
-        self.y = self.data[i,13]
-        self.keypoint_mat[id] = self.data[i,10:17]
 
 
     def execute_datas(self):
@@ -176,9 +182,10 @@ class Fun(object):
 
             id = int(self.data[i, 1]) - 1
             frame = int(self.data[i, 0])
-            if frame != int(self.data[i - 1, 0]):#每一帧
+            if frame != int(self.data[i - 1, 0]): #每一帧
                 self.count_frame += 1
-                self.tail_beat(frame, id, i)
+                self.tail_beat(frame, id, i)   ##摆尾统计
+                self.fishing_var(frame, id, i) ##聚集程度
         #     self.plot_track(id)
         #     ax = plt.gca()  # 获取到当前坐标轴信息
         #     ax.xaxis.set_ticks_position('top')  # 将X坐标轴移到上面
@@ -186,16 +193,26 @@ class Fun(object):
         # plt.show()
 
 
-            # self.fishing_var(frame, id, i)
-            # self.second_record(frame, id, i)
-            # self.swerve(id, i)
-            # self.halfhour_record(frame, id, i)
-            # self.swerve_faster(id, i)
-            # self.twenty_record(frame, id, i)
-            # self.ten_record(frame, id, i)
-            # self.five_record(frame, id, i)
+
+            self.second_record(frame, id, i)
+            self.swerve(id, i)
+            self.halfhour_record(frame, id, i)
+            self.swerve_faster(id, i)
+            self.twenty_record(frame, id, i)
+            self.ten_record(frame, id, i)
+            self.five_record(frame, id, i)
 
         print(self.keypoint_beatandswing)
+
+
+
+    def renewtlwh(self, i):
+        id = int(self.data[i, 1]) - 1
+        self.px = self.x
+        self.py =self.y
+        self.x = self.data[i,12]
+        self.y = self.data[i,13]
+        self.keypoint_mat[id] = self.data[i,10:17]
 
 
     def angle_2vet(self,line):
@@ -237,7 +254,7 @@ class Fun(object):
                 self.keypoint_angle_swing[idx][1]=max
 
         for row,_ in enumerate(self.keypoint_angle_swing):##判断一帧
-            if (self.keypoint_angle_swing[row][0]<=1 and self.keypoint_angle_swing[row][0]>=-1) and self.keypoint_angle_swing[row][2] == 1 :
+            if -1<=self.keypoint_angle_swing[row][0]<=1 and self.keypoint_angle_swing[row][2] == 1 :
                 self.keypoint_beatandswing[row][0] +=1
                 self.keypoint_beatandswing[row][1] += self.keypoint_angle_swing[row][1]
                 self.keypoint_angle_swing[row][1] = 0
@@ -246,32 +263,30 @@ class Fun(object):
             if -1<=self.keypoint_angle_swing[row][0]<=1 :
                 self.keypoint_angle_swing[row][2] = 0
 
+        if self.count_frame % eval_windows == 0:  ##1s内加入 ##累加
+            self.avg_beat.append(np.mean(self.keypoint_beatandswing[:][0]))
+            self.avg_swing.append(np.mean(self.keypoint_beatandswing[:][1]))
+
+
+
 
     def second_acceleration(self):
         for num in range(0,len(self.second_v)-1):
             self.second_acc.append(self.second_v[num] - self.second_v[num+1])
 
     def fishing_var(self,frame, id, i):
-        if self.count_frame % eval_windows != 0:
-            for t,l,w,h in self.tlwh:
-                if w !=0:
-                    self.var_x.append(t + w/2)
-                    self.var_y.append(l + h/2)
+        if self.count_frame % eval_windows != 0: ##1s内加入
+            for line in self.keypoint_mat:
+                self.var_x.append(line[2] * self.scale)
+                self.var_y.append(line[3] * self.scale)
         else:
-            if frame != int(self.data[i - 1, 0]):
-                self.var_x, self.var_y = [],[]
-                for t,l,w,h in self.tlwh:
-                    if w !=0:
-                        self.var_x.append((t + w/2)*self.scale)
-                        self.var_y.append((l + h/2)*self.scale)
-                self.fish_var.append(np.var(self.var_x)+np.var(self.var_y))
-                return
-            else:
-                self.var_x, self.var_y = [],[]
-                for t,l,w,h in self.tlwh:
-                    if w !=0:
-                        self.var_x.append(t + w/2)
-                        self.var_y.append(l + h/2)
+            for line in self.keypoint_mat:
+                self.var_x.append(line[2] * self.scale)
+                self.var_y.append(line[3] * self.scale)
+            self.fish_var.append(np.var(self.var_x)+np.var(self.var_y))
+            self.var_x, self.var_y = [],[]
+
+
 
     # def swerve(self):
     def swerve(self,id,i):
@@ -477,8 +492,6 @@ class Fun(object):
                     if self.second_id_rest_time[x] == 0:
                         k -= 1
 
-                # if x_dis ==0:
-                #     print(x_time)
                 if k != 0:
                     self.second_rest_time.append(rest_time/(time_windows*k))
                 else:
@@ -506,58 +519,15 @@ class Fun(object):
                 elif self.unit_dis < self.small_thres[id]:
                     self.second_id_rest_time[id] += 1
 
-                # 单文件
-                # self.distance[id].append(self.unit_dis)
-                # self.time[id] += 1
-                # print('d')
-                # x_dis =0
-                # for x in range(0,6):
-                #     x_dis += self.second_id_dis[x]
-
-                # for a,b in zip(self.second_id_dis,self.second_id_time):
-                #     if b!=0:
-                #         v = a/b
-                #                 #     else:
-                #                 #         continue
-                #                 #     self.second_id_v.append(v)
-                #                 # self.second_id_dis =[[],[],[],[],[]]
-                #                 # self.second_id_time= [0]*5
-                #
-                #                 # 单文件
-                #                 # x_dis = 0
-                #                 # for x in range(0,5):
-                #                 #     x_dis+=np.sum(self.distance[x])
-                #                 # self.each_file_distance.append(x_dis)
-    def plot_track(self,id):
-        ax.plot([self.x, self.px], [self.y, self.py], c="{}".format(color[id]), linewidth=1)
-
-    def thres_wh(self,temp_wh,id):
-        previous=0
-        for ind,element in enumerate(temp_wh):
-            if ind == 0:
-                previous = element
-                self.wh[id].append(previous)
-            else:
-                if element == previous:
-                    continue
-                else:
-                    self.wh[id].append(element)
-                    previous = element
-
-    def check_state(self):
-        state = ['010','101','202','020']
-        wh_str = str(self.wh[id])
-        for sta in state:
-            return wh_str.find(sta)
-
-
 
     def xls_writer(self):
-        worksheet = workbook.add_worksheet("{}".format(self.data_path))
+        # global workbook
+        workbook = xls.Workbook(result_path + "/track{}.xlsx".format(self.data_path).replace("keypointtracklet/",""))
+        worksheet = workbook.add_worksheet("{}".format(self.data_path).replace("keypointtracklet/",""))
         #判断文件类型
         heading = ['平均速度/s', '静息时间/s', '平均速度/0.5h',
                    '平均速度/20mins', '平均速度/10mins', '平均速度/5mins',
-                  '加速度/s', '聚集程度','转弯次数','快速转弯',"摆尾"]
+                  '加速度/s', '聚集程度','转弯次数','快速转弯',"摆尾次数","摆尾幅度"]
         worksheet.write_row('A1', heading)  # 需要判断哪个单元开始
 
         worksheet.write_column('A2', self.second_v)  # 需要判断哪个单元开始
@@ -570,8 +540,28 @@ class Fun(object):
         worksheet.write_column('H2', self.fish_var)
         worksheet.write_column('I2', self.swerves)
         worksheet.write_column('J2', self.swerves_faster)
-        worksheet.write_column('K2', self.swerves_faster)
+        worksheet.write_column('K2', self.avg_beat)
+        worksheet.write_column('L2', self.avg_swing)
+        workbook.close()
 
+
+
+def process_eval(filename):
+    # do sth here
+    fun = Fun(filename, result_path)
+    fun.execute()
+    return None
+
+def process_close(workbooook):
+    # do sth here
+    global workbook
+    workbook = workbooook
+    workbook.close()
+    return None
+
+def set_global(workbooook):
+    global workbook
+    workbook = workbooook
 
 
 if __name__ == '__main__':
@@ -585,14 +575,32 @@ if __name__ == '__main__':
     #     fun.execute()
     # workbook.close()
 
+
+
     # 单文件
+    # if not os.path.exists(result_path):
+    #     os.mkdir(result_path)
+    # workbook = xls.Workbook(result_path + "/track{}.xlsx".format(path_input))
+    # fun = Fun(path_input, result_path)
+    # fun.execute()
+    # workbook.close()
+
+    # 多文件多CPU
     if not os.path.exists(result_path):
         os.mkdir(result_path)
-    workbook = xls.Workbook(result_path + "/track{}.xlsx".format(path_input))
+    # for path_input in ["07","08","09"]:
+    file = ["keypointtracklet/07","keypointtracklet/08","keypointtracklet/09","keypointtracklet/j08"]
+    # file =["keytracktest/08","keytracktest/09"]
+    # workbook = xls.Workbook(result_path + "/track.xlsx")
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        executor.map(process_eval, file)
+        # work_list = [executor.submit(process_eval, i) for i in file]
+        # ret = wait(fs=work_list, timeout=None, return_when=ALL_COMPLETED)
+        # executor.submit(process_close, workbook)
 
-    fun = Fun(path_input, result_path)
-    fun.execute()
-    workbook.close()
+
+
+
 # 分区间统计
 # from itertools import groupby
 #
