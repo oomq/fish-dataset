@@ -1,16 +1,20 @@
 import pandas as pd
 import os
 
+input_folder = r'output-test'
+output_pathname = r'test-test.xlsx'
 ls = []
-for dirpath, dirname, files in os.walk(r'output'):
+for dirpath, dirname, files in os.walk(input_folder):
     for file in files:
+        if "09" in file:
+            continue
         if file.endswith('xlsx'):
             # 为防止文件与代码不在同一个路径时出错，组合绝对路径
             ls.append(dirpath + '\\' + file)
 
 # pd.ExcelWriter 函数可以追加写入
 sheetname_list = []
-with pd.ExcelWriter(r'test.xlsx', mode='w+') as xlsx:
+with pd.ExcelWriter(output_pathname, mode='w+') as xlsx:
     for file in ls:
         df = pd.read_excel(file, sheet_name=None)
         # 获取excel 的表名称
